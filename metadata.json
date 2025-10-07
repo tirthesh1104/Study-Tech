@@ -1,0 +1,9 @@
+{
+  "name": "smart cirrcumal attendance app",
+  "description": "An intelligent dashboard for teachers to enhance online classes with Google Meet integration and AI-powered student engagement tracking.",
+  "requestFramePermissions": [
+    "camera",
+    "geolocation",
+    "microphone"
+  ]
+}
