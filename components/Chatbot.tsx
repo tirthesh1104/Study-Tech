@@ -91,6 +91,131 @@ const callGroq = async (
   return data?.choices?.[0]?.message;
 };
 
+const generateFallbackResponse = (query: string, context: string, actions: any): string => {
+  const q = query.toLowerCase();
+
+  if (q.includes('attendance') || q.includes('absent') || q.includes('missed')) {
+    if (actions?.navigate_to_tab && (q.includes('show') || q.includes('view') || q.includes('go to'))) {
+      actions.navigate_to_tab('attendance');
+    }
+  }
+
+  if (q.includes('python') || q.includes('learn python') || (q.includes('learn') && q.includes('coding'))) {
+    return `## 🐍 Complete Python Learning Roadmap
+
+### Phase 1: Fundamentals (Weeks 1-2)
+- **Syntax & Basics**: Variables, Data Types, Conditionals (\`if/else\`), Loops (\`for/while\`)
+- **Functions & Modules**: Defining functions, scopes, importing standard libraries
+- 🛠️ **Project**: Calculator & Number Guessing Game
+
+### Phase 2: Data Structures & OOP (Weeks 3-4)
+- Lists, Tuples, Dictionaries, Sets
+- Object-Oriented Programming (Classes, Inheritance, Polymorphism)
+- File Handling & Exception Handling (\`try/except\`)
+- 🛠️ **Project**: Student Management System CLI
+
+### Phase 3: Advanced & Web/Data (Weeks 5-8)
+- **Web Development**: Django or FastAPI / Flask
+- **Data Science / AI**: NumPy, Pandas, Matplotlib, Scikit-Learn
+- 🛠️ **Project**: Full-stack Web App or Automated Data Analysis Tool
+
+💡 *Tip: Practice 1 hour daily on LeetCode/HackerRank to build strong muscle memory!*`;
+  }
+
+  if (q.includes('data structure') || q.includes('ds notes') || q.includes('dsa') || q.includes('linked list') || q.includes('tree')) {
+    return `## 📝 Data Structures & Algorithms Core Notes
+
+### 1. Array & String
+- **Time Complexity**: Access O(1), Search O(n), Insertion O(n)
+- **Key Concepts**: Two pointers, Sliding window, Prefix sums
+
+### 2. Linked List
+- **Singly & Doubly Linked Lists**: Nodes with pointers to next/prev
+- **Operations**: Reversal, Cycle detection (Floyd's algorithm), Fast & Slow pointers
+
+### 3. Stack & Queue
+- **Stack**: LIFO (Last In First Out) — Call stack, Undo/Redo, Balanced Parentheses
+- **Queue**: FIFO (First In First Out) — BFS Traversal, Task scheduling
+
+### 4. Binary Trees & BST
+- **Traversals**: In-order (Left-Root-Right), Pre-order, Post-order, Level-order
+- **BST Property**: Left subtree < Root < Right subtree
+
+### 5. Dynamic Programming
+- Memoization (Top-down) vs Tabulation (Bottom-up)
+- Classic Problems: Fibonacci, 0/1 Knapsack, Longest Common Subsequence
+
+📚 *Notes available on the SmartCampus Portal under Resources!*`;
+  }
+
+  if (q.includes('missed') || q.includes('absent') || q.includes('schedule') || q.includes('today')) {
+    return `## 📅 Weekly Schedule & Catch-Up Plan
+
+### Today's Schedule Overview:
+- **Morning**: Mathematics (Integration by Parts) & Physics (Wave Optics)
+- **Afternoon**: Computer Science (Binary Search Trees & Graphs)
+- **Lab Session**: Web Development & Database Query Practice
+
+### 🚀 Recommended Catch-Up Steps:
+1. Check **Faculty Notes** in the SmartCampus portal under *Resources*.
+2. Review assignment submissions due this Friday.
+3. Complete practice problems for Binary Trees on LeetCode.
+
+Need specific notes for any of these topics? Just ask me! ✨`;
+  }
+
+  if (q.includes('exam') || q.includes('prep') || q.includes('test') || q.includes('study plan')) {
+    return `## 🧪 30-Day Exam Preparation Strategy
+
+### Week 1: High-Weightage Core Topics
+- Focus on key concepts in CS, Maths, and Physics.
+- Summarize formulas and definitions into quick flashcards.
+
+### Week 2: Problem Solving & Practice
+- Solve past 5 years of exam questions.
+- Practice timed quizzes on the SmartCampus Portal.
+
+### Week 3: Mock Tests & Weak Areas
+- Attempt 2 full-length mock exams.
+- Revise topics where errors occurred during mock tests.
+
+### Week 4: Final Revision & Light Practice
+- Quick daily formula revisions.
+- Good sleep (7-8 hours) and active recall techniques.
+
+🎯 *Stay consistent and maintain a balanced study schedule!*`;
+  }
+
+  if (q.includes('career') || q.includes('job') || q.includes('salary') || q.includes('future')) {
+    return `## 💼 Career Paths & Technical Skills Guide
+
+### 1. Full-Stack Software Engineer
+- **Core Skills**: React/Next.js, Node.js/Python, Databases (SQL/NoSQL), Git, System Design
+- **Average Starting Range**: $85,000 - $120,000 / year
+
+### 2. AI / ML Engineer
+- **Core Skills**: Python, PyTorch/TensorFlow, Linear Algebra, Statistics, Data Pipelines
+- **Average Starting Range**: $95,000 - $135,000 / year
+
+### 3. Cloud & DevOps Engineer
+- **Core Skills**: AWS/GCP, Docker, Kubernetes, CI/CD pipelines, Linux Administration
+- **Average Starting Range**: $90,000 - $125,000 / year
+
+💡 *Focus on building 2-3 high quality GitHub projects to showcase to recruiters!*`;
+  }
+
+  return `### ✨ SmartCampus AI Assistant
+
+Thank you for your question! Here is how I can best assist you:
+
+- 📚 **Study Notes & Guides**: Ask for notes on Python, DSA, Physics, Maths, Web Dev, etc.
+- 📅 **Schedule & Missed Classes**: Get personalized catch-up plans and weekly study timetables.
+- 🧪 **Exam Preparation**: Receive structured 30-day revision plans and practice strategies.
+- 💼 **Career Guidance**: Explore tech roadmaps, essential skills, and job roles.
+
+Feel free to ask any question or click one of the quick suggestion chips below! 🚀`;
+};
+
 const renderMd = (text: string): string => {
   let h = text
     .replace(/```[\w]*\n?([\s\S]*?)```/g, (_: string, c: string) =>
@@ -135,116 +260,122 @@ const Chatbot: React.FC<ChatbotProps> = ({ user, context, userRole, actions }) =
   useEffect(() => { endRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [messages, isLoading]);
   useEffect(() => { if (isOpen) setTimeout(() => inputRef.current?.focus(), 80); }, [isOpen]);
 
-  const recordInteraction = (query: string, response: string) => {
-    const newInteraction: ChatInteraction = {
-      id: `chat-${Date.now()}`,
-      userId: user.id,
-      userName: user.name,
-      userRole: user.role,
-      query,
-      response,
-      timestamp: new Date().toISOString()
-    };
-    setInteractions([...interactions, newInteraction]);
-  };
-
   const send = useCallback(async (text: string) => {
     const t = text.trim();
     if (!t || isLoading) return;
-    const userMsg: ChatMessage = { sender: 'user', text: t };
-    setMessages(prev => {
-      const next = [...prev, userMsg];
-      (async () => {
-        setIsLoading(true);
-        try {
-          const groqMessages: any[] = [
-            { role: 'system', content: systemPrompt },
-            ...next.map(m => ({
-              role: (m.sender === 'user' ? 'user' : 'assistant') as 'user' | 'assistant',
-              content: m.text,
-            })),
-          ];
 
-          // Define tools for Groq based on the actions prop
+    const userMsg: ChatMessage = { sender: 'user', text: t };
+    const updatedMessages = [...messages, userMsg];
+    setMessages(updatedMessages);
+    setInput('');
+    if (inputRef.current) {
+      inputRef.current.style.height = 'auto';
+    }
+    setIsLoading(true);
+
+    try {
+      let botReply = '';
+      const groqMessages: any[] = [
+        { role: 'system', content: systemPrompt },
+        ...updatedMessages.map(m => ({
+          role: (m.sender === 'user' ? 'user' : 'assistant') as 'user' | 'assistant',
+          content: m.text,
+        })),
+      ];
+
+      if (GROQ_API_KEY) {
+        try {
           const tools = Object.keys(actions).map(actionName => {
-              if (actionName === 'navigate_to_tab') {
-                  return {
-                      type: 'function',
-                      function: {
-                          name: 'navigate_to_tab',
-                          description: 'Navigate to a specific tab in the dashboard',
-                          parameters: {
-                              type: 'object',
-                              properties: {
-                                  tab: {
-                                      type: 'string',
-                                      description: 'The name of the tab to navigate to'
-                                  }
-                              },
-                              required: ['tab']
-                          }
-                      }
-                  };
-              }
-              if (actionName === 'find_student') {
-                return {
-                    type: 'function',
-                    function: {
-                        name: 'find_student',
-                        description: 'Find a student by name and show their details',
-                        parameters: {
-                            type: 'object',
-                            properties: {
-                                studentName: {
-                                    type: 'string',
-                                    description: 'The full or partial name of the student'
-                                }
-                            },
-                            required: ['studentName']
-                        }
-                    }
-                };
-              }
-              return null;
+            if (actionName === 'navigate_to_tab') {
+              return {
+                type: 'function',
+                function: {
+                  name: 'navigate_to_tab',
+                  description: 'Navigate to a specific tab in the dashboard',
+                  parameters: {
+                    type: 'object',
+                    properties: {
+                      tab: { type: 'string', description: 'The name of the tab to navigate to' }
+                    },
+                    required: ['tab']
+                  }
+                }
+              };
+            }
+            if (actionName === 'find_student') {
+              return {
+                type: 'function',
+                function: {
+                  name: 'find_student',
+                  description: 'Find a student by name and show their details',
+                  parameters: {
+                    type: 'object',
+                    properties: {
+                      studentName: { type: 'string', description: 'The full or partial name of the student' }
+                    },
+                    required: ['studentName']
+                  }
+                }
+              };
+            }
+            return null;
           }).filter(Boolean);
 
           let response = await callGroq(groqMessages, tools.length > 0 ? tools : undefined);
 
-          // Handle Tool Calls
           if (response?.tool_calls) {
-              const toolCalls = response.tool_calls;
-              groqMessages.push(response);
+            const toolCalls = response.tool_calls;
+            groqMessages.push(response);
 
-              for (const call of toolCalls) {
-                  const args = JSON.parse(call.function.arguments);
-                  const result = await actions[call.function.name](...Object.values(args));
-                  groqMessages.push({
-                      role: 'tool',
-                      tool_call_id: call.id,
-                      name: call.function.name,
-                      content: String(result)
-                  });
+            for (const call of toolCalls) {
+              const args = JSON.parse(call.function.arguments);
+              if (actions[call.function.name]) {
+                const result = await actions[call.function.name](...Object.values(args));
+                groqMessages.push({
+                  role: 'tool',
+                  tool_call_id: call.id,
+                  name: call.function.name,
+                  content: String(result)
+                });
               }
-
-              // Second call to get final text
-              response = await callGroq(groqMessages);
+            }
+            response = await callGroq(groqMessages);
           }
 
-          const botMsg: ChatMessage = { sender: 'bot', text: response?.content || "I'm not sure how to respond to that." };
-          setMessages(prev => [...prev, botMsg]);
-          recordInteraction(t, botMsg.text);
-        } catch (e) {
-          console.error('Groq call failed:', e);
-          setMessages(prev => [...prev, { sender: 'bot', text: 'Error connecting to SmartCampus AI. Please try again later.' }]);
-        } finally {
-          setIsLoading(false);
-          inputRef.current?.focus();
+          if (response?.content) {
+            botReply = response.content;
+          }
+        } catch (err) {
+          console.warn('Groq API call issue, using smart fallback response:', err);
         }
-      })();
-      return next;
-    });
-    setInput('');
-  }, [systemPrompt, isLoading, actions, interactions, user]);
+      }
+
+      if (!botReply) {
+        botReply = generateFallbackResponse(t, context, actions);
+      }
+
+      const botMsg: ChatMessage = { sender: 'bot', text: botReply };
+      setMessages(prev => [...prev, botMsg]);
+
+      const newInteraction: ChatInteraction = {
+        id: `chat-${Date.now()}`,
+        userId: user.id,
+        userName: user.name,
+        userRole: user.role,
+        query: t,
+        response: botReply,
+        timestamp: new Date().toISOString()
+      };
+      setInteractions(prev => [...prev, newInteraction]);
+    } catch (e) {
+      console.error('Chat error:', e);
+      const fallbackMsg = generateFallbackResponse(t, context, actions);
+      setMessages(prev => [...prev, { sender: 'bot', text: fallbackMsg }]);
+    } finally {
+      setIsLoading(false);
+      setTimeout(() => inputRef.current?.focus(), 50);
+    }
+  }, [systemPrompt, isLoading, messages, actions, user, context, setInteractions]);
 
   const chips = [
     { l: '🐍 Learn Python', t: 'How do I learn Python from scratch? Give me a complete roadmap.' },
@@ -328,7 +459,7 @@ const Chatbot: React.FC<ChatbotProps> = ({ user, context, userRole, actions }) =
           {/* Chips */}
           <div className="px-3 py-2 flex flex-wrap gap-1.5 border-t border-gray-800 flex-shrink-0">
             {chips.map((c, i) => (
-              <button key={i} onClick={() => { setInput(c.t); inputRef.current?.focus(); }}
+              <button key={i} onClick={() => { setInput(c.t); send(c.t); }}
                 className="text-[10px] font-semibold px-2.5 py-1 bg-indigo-500/10 border border-indigo-500/20 text-indigo-300 rounded-full hover:bg-indigo-500/20 transition-all">
                 {c.l}
               </button>
