@@ -1,13 +1,18 @@
-import React from 'react';
-import { User } from '../types';
+import React, { useState } from 'react';
+import { User, AppNotification } from '../types';
 
 interface HeaderProps {
   user: User;
   onLogout: () => void;
   onOpenSettings: () => void;
+  notifications?: AppNotification[];
+  onMarkNotificationAsRead?: (id: string) => void;
 }
 
-const Header: React.FC<HeaderProps> = ({ user, onLogout, onOpenSettings }) => {
+const Header: React.FC<HeaderProps> = ({ user, onLogout, onOpenSettings, notifications = [], onMarkNotificationAsRead }) => {
+  const [isNotifOpen, setIsNotifOpen] = useState(false);
+  const unreadCount = notifications.filter(n => !n.isRead).length;
+
   return (
     <div className="sticky top-0 z-40">
       {/* Decorative top bar inspired by the image */}
@@ -19,7 +24,7 @@ const Header: React.FC<HeaderProps> = ({ user, onLogout, onOpenSettings }) => {
           {/* Brand/Logo on the left */}
           <div className="flex items-center gap-3">
             <span className="text-2xl" role="img" aria-label="bug icon">🐞</span>
-            <span className="text-xl font-bold text-white tracking-tight">Debugging Dynamos ✨</span>
+            <span className="text-xl font-bold text-white tracking-tight">EduPlus SmartCampus ✨</span>
           </div>
           
           {/* Actions on the right */}
@@ -27,6 +32,50 @@ const Header: React.FC<HeaderProps> = ({ user, onLogout, onOpenSettings }) => {
             <span className="hidden sm:inline text-gray-300">
               Welcome, <span className="font-semibold text-white">{user.name}</span>
             </span>
+
+            {/* Notification Bell */}
+            <div className="relative">
+              <button
+                onClick={() => setIsNotifOpen(!isNotifOpen)}
+                className="p-2 text-gray-300 rounded-full hover:bg-gray-700/50 hover:text-white transition-colors relative"
+                aria-label="Notifications"
+              >
+                <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+                </svg>
+                {unreadCount > 0 && (
+                  <span className="absolute top-1 right-1 bg-red-600 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full border-2 border-gray-950">
+                    {unreadCount}
+                  </span>
+                )}
+              </button>
+
+              {isNotifOpen && (
+                <div className="absolute right-0 mt-3 w-80 bg-gray-900 border border-gray-700 rounded-2xl shadow-2xl overflow-hidden z-50 animate-in fade-in slide-in-from-top-2">
+                  <div className="p-4 border-b border-gray-700 bg-gray-800/50 flex justify-between items-center">
+                    <h4 className="font-bold text-white">Notifications</h4>
+                    <span className="text-xs text-indigo-400 font-bold">{unreadCount} Unread</span>
+                  </div>
+                  <div className="max-h-96 overflow-y-auto">
+                    {notifications.length > 0 ? notifications.map(n => (
+                      <div 
+                        key={n.id} 
+                        className={`p-4 border-b border-gray-800 hover:bg-gray-800 transition-colors cursor-pointer ${!n.isRead ? 'bg-indigo-600/5' : ''}`}
+                        onClick={() => {
+                          if (onMarkNotificationAsRead) onMarkNotificationAsRead(n.id);
+                        }}
+                      >
+                        <p className={`text-sm ${!n.isRead ? 'text-white font-medium' : 'text-gray-400'}`}>{n.message}</p>
+                        <p className="text-[10px] text-gray-500 mt-2 font-mono uppercase">{new Date(n.createdAt).toLocaleString()}</p>
+                      </div>
+                    )) : (
+                      <div className="p-8 text-center text-gray-500 italic text-sm">No notifications yet.</div>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+
             {/* Settings button */}
             <button
               onClick={onOpenSettings}

@@ -7,14 +7,14 @@ interface ObserverOptions {
 }
 
 function useIntersectionObserver(
-  elementRef: RefObject<Element>,
+  elementRef: RefObject<Element | null>,
   {
     threshold = 0.1,
     rootMargin = '0px',
     triggerOnce = true,
   }: ObserverOptions = {}
 ): boolean {
-  const [isIntersecting, setIsIntersecting] = useState(false);
+  const [isIntersecting, setIntersecting] = useState(false);
 
   useEffect(() => {
     const element = elementRef.current;
@@ -23,22 +23,19 @@ function useIntersectionObserver(
     const observer = new IntersectionObserver(
       ([entry]) => {
         if (entry.isIntersecting) {
-          setIsIntersecting(true);
+          setIntersecting(true);
           if (triggerOnce) {
             observer.unobserve(element);
           }
         } else if (!triggerOnce) {
-            setIsIntersecting(false);
+          setIntersecting(false);
         }
       },
       { threshold, rootMargin }
     );
 
     observer.observe(element);
-
-    return () => {
-      observer.disconnect();
-    };
+    return () => observer.disconnect();
   }, [elementRef, threshold, rootMargin, triggerOnce]);
 
   return isIntersecting;

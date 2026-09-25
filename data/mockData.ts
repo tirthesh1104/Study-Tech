@@ -1,4 +1,4 @@
-import { User, UserRole, Student, AssignmentStatus, Exam, LiveClass } from '../types';
+import { User, UserRole, Student, AssignmentStatus, Exam, LiveClass, AdminRole, LeaveApplication, QuestionPaper, HostelComplaint, LibrarySelfHelpBook, FacultyLeaveRequest, AppNotification, LeaveApprovalStatus, AdminTask, AdminMeeting, Complaint, CampusEvent } from '../types';
 
 export const MOCK_USERS: User[] = [
   {
@@ -29,6 +29,66 @@ export const MOCK_USERS: User[] = [
     registeredPhotoUrl: 'https://i.pravatar.cc/300?u=parent@school.com',
     enableScanOnLogin: true,
   },
+  {
+    id: 'user-admin-1',
+    name: 'Dr. Principal',
+    email: 'admin@college.edu',
+    password: 'admin',
+    role: UserRole.Admin,
+    adminRole: AdminRole.Principal,
+    registeredPhotoUrl: 'https://images.unsplash.com/photo-1560250097-0b93528c311a?auto=format&fit=crop&q=80&w=256&h=256',
+    enableScanOnLogin: true,
+  },
+  {
+    id: 'user-admin-2',
+    name: 'Prof. Sharma (HOD)',
+    email: 'hod@college.edu',
+    password: 'hod',
+    role: UserRole.Admin,
+    adminRole: AdminRole.HOD,
+    registeredPhotoUrl: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&q=80&w=256&h=256',
+    enableScanOnLogin: true,
+  },
+  {
+    id: 'user-admin-dean',
+    name: 'Dr. Mehta (Dean)',
+    email: 'dean@college.edu',
+    password: 'dean',
+    role: UserRole.Admin,
+    adminRole: AdminRole.Dean,
+    registeredPhotoUrl: 'https://i.pravatar.cc/300?u=dean@college.edu',
+    enableScanOnLogin: true,
+  },
+  {
+    id: 'user-admin-hr',
+    name: 'Ms. Kapoor (HR)',
+    email: 'hr@college.edu',
+    password: 'hr',
+    role: UserRole.Admin,
+    adminRole: AdminRole.HR,
+    registeredPhotoUrl: 'https://i.pravatar.cc/300?u=hr@college.edu',
+    enableScanOnLogin: true,
+  },
+  {
+    id: 'user-admin-office',
+    name: 'Mr. Gupta (Office)',
+    email: 'office@college.edu',
+    password: 'office',
+    role: UserRole.Admin,
+    adminRole: AdminRole.Office,
+    registeredPhotoUrl: 'https://i.pravatar.cc/300?u=office@college.edu',
+    enableScanOnLogin: true,
+  },
+  {
+    id: 'user-hostel-1',
+    name: 'Mr. Rajesh (Hostel Incharge)',
+    email: 'hostel@college.edu',
+    password: 'hostel',
+    role: UserRole.Admin,
+    adminRole: AdminRole.HostelIncharge,
+    registeredPhotoUrl: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?auto=format&fit=crop&q=80&w=256&h=256',
+    enableScanOnLogin: true,
+  }
 ];
 
 export const MOCK_STUDENTS: Student[] = [
@@ -89,8 +149,12 @@ export const MOCK_STUDENTS: Student[] = [
     behaviourStatus: 'Good',
     blockReason: null,
     progress: [],
+    extracurriculars: [
+      { id: 'act-1', title: 'Football Team', category: 'Sports', description: 'Captain of the varsity football team.', date: '2023-10-20', hoursSpent: 10, status: 'Ongoing' },
+      { id: 'act-2', title: 'Code Club', category: 'Tech', description: 'Working on a community project for the campus.', date: '2023-10-15', hoursSpent: 5, status: 'Ongoing' }
+    ],
   },
-   {
+  {
     id: 'user-5',
     name: 'Student Eve',
     rollNumber: 'S003',
@@ -191,4 +255,171 @@ export const MOCK_LIVE_CLASSES: LiveClass[] = [
     teacherName: 'Teacher Alice',
     status: 'Completed',
   },
+];
+
+export const MOCK_LEAVE_APPLICATIONS: LeaveApplication[] = [
+  {
+    id: 'leave-1',
+    studentId: 'user-2',
+    studentName: 'Student Bob',
+    startDate: '2023-11-01',
+    endDate: '2023-11-02',
+    reason: 'Fever',
+    status: 'Pending',
+    applicationDate: new Date().toISOString(),
+    studentRollNumber: 'S001'
+  }
+];
+
+export const MOCK_QUESTION_PAPERS: QuestionPaper[] = [
+  {
+    id: 'qp-1',
+    subject: 'Data Structures',
+    examType: 'Midterm',
+    year: '2023',
+    semester: '3rd',
+    fileUrl: '#',
+    uploadedBy: 'user-1',
+    uploadedByName: 'Teacher Alice',
+    createdAt: new Date().toISOString(),
+  },
+  {
+    id: 'qp-2',
+    subject: 'Algorithms',
+    examType: 'Final',
+    year: '2022',
+    semester: '4th',
+    fileUrl: '#',
+    uploadedBy: 'user-admin-1',
+    uploadedByName: 'Dr. Principal',
+    createdAt: new Date().toISOString(),
+  }
+];
+
+export const MOCK_HOSTEL_COMPLAINTS: HostelComplaint[] = [
+  {
+    id: 'hc-1',
+    studentId: 'user-2',
+    studentName: 'Student Bob',
+    title: 'Water Issue',
+    description: 'No water supply in Room 102 since morning.',
+    status: 'Pending',
+    createdAt: new Date().toISOString(),
+  }
+];
+
+export const MOCK_LIBRARY_SELF_HELP_BOOKS: LibrarySelfHelpBook[] = [
+  {
+    id: 'lib-1',
+    bookName: 'Atomic Habits',
+    author: 'James Clear',
+    category: 'Self-Help',
+    availability: 'Available',
+  },
+  {
+    id: 'lib-2',
+    bookName: 'Deep Work',
+    author: 'Cal Newport',
+    category: 'Productivity',
+    availability: 'Available',
+  },
+  {
+    id: 'lib-3',
+    bookName: 'The 5 AM Club',
+    author: 'Robin Sharma',
+    category: 'Self-Help',
+    availability: 'Borrowed',
+  }
+];
+
+export const MOCK_FACULTY_LEAVE_REQUESTS: FacultyLeaveRequest[] = [
+  {
+    id: 'leave-f-1',
+    facultyId: 'user-1',
+    facultyName: 'Teacher Alice',
+    leaveType: 'Medical Leave',
+    startDate: '2023-11-10',
+    endDate: '2023-11-12',
+    totalDays: 3,
+    reason: 'Severe fever and doctor recommended rest.',
+    currentLevel: AdminRole.HOD,
+    status: LeaveApprovalStatus.Pending,
+    approvalHistory: [],
+    createdAt: new Date().toISOString(),
+  }
+];
+
+export const MOCK_NOTIFICATIONS: AppNotification[] = [
+  {
+    id: 'notif-1',
+    userId: 'user-1',
+    message: 'Welcome to EduPlus! Your dashboard is ready.',
+    type: 'info',
+    isRead: false,
+    createdAt: new Date().toISOString(),
+  }
+];
+
+export const MOCK_ADMIN_TASKS: AdminTask[] = [
+  {
+    id: 'task-1',
+    title: 'Review Syllabus',
+    description: 'Review the updated syllabus for Computer Science.',
+    assignedTo: 'user-1',
+    assignedBy: 'user-admin-1',
+    status: 'Pending',
+    deadline: '2023-11-20',
+    createdAt: new Date().toISOString(),
+  },
+  {
+    id: 'task-2',
+    title: 'Grade Midterms',
+    description: 'Finish grading all mid-term papers by Friday.',
+    assignedTo: 'user-1',
+    assignedBy: 'user-admin-2',
+    status: 'In Progress',
+    deadline: '2023-11-15',
+    createdAt: new Date().toISOString(),
+  }
+];
+
+export const MOCK_ADMIN_MEETINGS: AdminMeeting[] = [
+  {
+    id: 'meet-1',
+    title: 'Faculty Monthly Meeting',
+    date: '2023-11-25',
+    time: '10:00 AM',
+    meetLink: 'https://meet.google.com/abc-defg-hij',
+    invitedTeachers: ['user-1'],
+    createdBy: 'user-admin-1',
+  }
+];
+
+export const MOCK_COMPLAINTS: Complaint[] = [
+  {
+    id: 'comp-1',
+    userId: 'user-2',
+    userName: 'Student Bob',
+    userRole: UserRole.Student,
+    subject: 'Library AC',
+    description: 'The AC in the library is not working properly.',
+    status: 'Pending',
+    createdAt: new Date().toISOString(),
+  }
+];
+
+export const MOCK_CAMPUS_EVENTS: CampusEvent[] = [
+  {
+    id: 'event-1',
+    title: 'Tech Fest 2023',
+    description: 'Annual technology festival with workshops and competitions.',
+    date: '2023-12-10',
+    location: 'Main Auditorium',
+    organizer: 'Tech Club',
+    category: 'Academic',
+    time: '10:00 AM',
+    createdBy: 'user-admin-1',
+    status: 'Planned',
+    createdAt: new Date().toISOString(),
+  }
 ];

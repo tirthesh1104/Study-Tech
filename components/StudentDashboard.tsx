@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useCallback, useEffect } from 'react';
-import { User, Student, LearningPath, LeaveApplication, Exam, ExamSubmission, UserRole, LiveClass } from '../types';
+import { User, Student, LearningPath, LeaveApplication, Exam, ExamSubmission, UserRole, LiveClass, CampusEvent, QuestionPaper, HostelComplaint, LibrarySelfHelpBook, AppNotification } from '../types';
 import Header from './Header';
 import Chatbot from './Chatbot';
 import RollAccountView from './RollAccountView';
@@ -16,12 +16,28 @@ import AccountSettings from './AccountSettings';
 import LeaveApplicationManager from './LeaveApplicationManager';
 import ExamPortal from './ExamPortal';
 import LiveClassesView from './LiveClassesView';
+import ExtracurricularManager from './ExtracurricularManager';
+import EventManager from './EventManager';
+import CareerGuidance from './CareerGuidance';
+import EmotionalPulse from './EmotionalPulse';
+import Scholarships from './Scholarships';
+import SkillPassport from './SkillPassport';
+import SkillExchange from './SkillExchange';
+import ResourceBooking from './ResourceBooking';
+import ParentPrivacy from './ParentPrivacy';
+import StudyRooms from './StudyRooms';
+import AssignmentDualCheck from './AssignmentDualCheck';
+import AIStudyTwin from './AIStudyTwin';
+import NotesManager from './NotesManager';
+import AbsentStudentView from './AbsentStudentView';
+import TroubleshootingDocumentation from './TroubleshootingDocumentation';
 
 interface StudentDashboardProps {
   user: User;
   onLogout: () => void;
   studentData: Student;
   onPlanUpdate: (learningPath: LearningPath) => void;
+  onUpdateStudent?: (student: Student) => void;
   onUpdateUser: (user: User) => void;
   leaveApplications: LeaveApplication[];
   onApplyForLeave: (applicationData: Omit<LeaveApplication, 'id' | 'status' | 'applicationDate'>) => void;
@@ -29,14 +45,24 @@ interface StudentDashboardProps {
   examSubmissions: ExamSubmission[];
   onSubmitExam: (submission: Omit<ExamSubmission, 'id' | 'score' | 'studentName'>) => void;
   liveClasses: LiveClass[];
+  events: CampusEvent[];
+  questionPapers: QuestionPaper[];
+  onUploadQuestionPaper: (paper: Omit<QuestionPaper, 'id' | 'uploadedBy' | 'uploadedByName' | 'createdAt'>) => void;
+  hostelComplaints: HostelComplaint[];
+  onSubmitHostelComplaint: (complaint: Omit<HostelComplaint, 'id' | 'studentId' | 'studentName' | 'status' | 'createdAt'>) => void;
+  librarySelfHelpBooks: LibrarySelfHelpBook[];
+  notifications: AppNotification[];
+  onMarkNotificationAsRead: (id: string) => void;
+  onSubmitComplaint: (complaint: { subject: string; description: string }) => void;
 }
 
 type ReadinessStatus = 'idle' | 'checking' | 'ready' | 'geofence_fail' | 'permission_fail' | 'error';
 
-const StudentDashboard: React.FC<StudentDashboardProps> = ({ user, onLogout, studentData, onPlanUpdate, onUpdateUser, leaveApplications, onApplyForLeave, exams, examSubmissions, onSubmitExam, liveClasses }) => {
+const StudentDashboard: React.FC<StudentDashboardProps> = ({ user, onLogout, studentData, onPlanUpdate, onUpdateStudent, onUpdateUser, leaveApplications, onApplyForLeave, exams, examSubmissions, onSubmitExam, liveClasses, events, questionPapers, onUploadQuestionPaper, hostelComplaints, onSubmitHostelComplaint, librarySelfHelpBooks, notifications, onMarkNotificationAsRead, onSubmitComplaint }) => {
   const [activeTab, setActiveTab] = useState('overview');
   const [isCheckinFlowOpen, setIsCheckinFlowOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [complaintType, setComplaintType] = useState<'general' | 'hostel'>('general');
 
   // New states for the "Ready for Class" feature
   const [readinessStatus, setReadinessStatus] = useState<ReadinessStatus>('idle');
@@ -125,7 +151,7 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ user, onLogout, stu
 
   const chatbotActions = useMemo(() => ({
     navigate_to_tab: async (tab: string) => {
-        const validTabs = ['overview', 'progress', 'attendance', 'leave', 'learning', 'exams', 'files', 'links', 'live'];
+        const validTabs = ['overview', 'live', 'progress', 'attendance', 'leave', 'learning', 'activities', 'exams', 'events', 'career', 'files', 'links', 'papers', 'hostel', 'library', 'pulse', 'scholarships', 'passport', 'exchange', 'resources', 'privacy', 'rooms', 'assignments', 'twin', 'notes', 'absent', 'support'];
         const lowerTab = tab.toLowerCase().replace(/\s+/g, '');
 
         if (validTabs.includes(lowerTab)) {
@@ -173,7 +199,14 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ user, onLogout, stu
                 </div>
               </AnimatedElement>
               <AnimatedElement delay={100}>
-                <div className="bg-gray-800/50 p-6 rounded-xl border border-gray-700 flex flex-col items-center justify-center interactive-card text-center min-h-[290px]">
+                <div className="bg-gray-800/50 p-6 rounded-xl border border-gray-700 interactive-card">
+                   <h3 className="text-lg font-semibold text-indigo-400">Activities Tracker</h3>
+                   <p className="text-4xl font-bold mt-2">{(studentData.extracurriculars || []).length}</p>
+                   <p className="text-gray-400">Active involvements</p>
+                </div>
+              </AnimatedElement>
+              <AnimatedElement delay={200} className="md:col-span-2">
+                <div className="bg-gray-800/50 p-6 rounded-xl border border-gray-700 flex flex-col items-center justify-center interactive-card text-center min-h-[200px]">
                   <ReadinessStatusIcon />
                   <h3 className="text-xl font-bold text-white mt-4 mb-2">Ready for Class?</h3>
                   <p className={`mb-4 text-sm min-h-[40px] ${getReadinessMessageColor()}`}>{readinessMessage}</p>
@@ -187,16 +220,13 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ user, onLogout, stu
                         >
                           {readinessStatus === 'checking' ? 'Checking...' : "I'm on Campus, Check My Location"}
                         </button>
-                        <div className="mt-4 text-xs text-gray-500 max-w-xs">
-                            <strong>Tips:</strong> For best results, connect to campus Wi-Fi and enable high-accuracy location.
-                        </div>
                     </>
                   )}
                 </div>
               </AnimatedElement>
             </div>
              {readinessStatus === 'ready' && (
-                 <AnimatedElement delay={200} className="mt-6">
+                 <AnimatedElement delay={300} className="mt-6">
                     <div className="bg-gray-800/50 p-6 rounded-xl border border-green-500/50 flex flex-col items-center justify-center interactive-card">
                         <svg className="w-16 h-16 text-green-400 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
                         <h3 className="text-xl font-bold text-white mb-2">You're All Set!</h3>
@@ -210,11 +240,13 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ user, onLogout, stu
                     </div>
                 </AnimatedElement>
             )}
-            <AnimatedElement delay={readinessStatus === 'ready' ? 300 : 200} className="mt-6">
+            <AnimatedElement delay={400} className="mt-6">
               <PerformancePredictor student={studentData} />
             </AnimatedElement>
           </div>
         );
+      case 'live':
+        return <AnimatedElement><LiveClassesView liveClasses={liveClasses} /></AnimatedElement>;
       case 'progress':
         return <AnimatedElement><ProgressTracker student={studentData} /></AnimatedElement>;
       case 'attendance':
@@ -230,6 +262,36 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ user, onLogout, stu
             student={studentData} 
             onPlanGenerated={onPlanUpdate}
         /></AnimatedElement>;
+      case 'activities':
+        return <AnimatedElement><ExtracurricularManager 
+            student={studentData} 
+            mode="student"
+            onAddActivity={(act) => {
+              if (onUpdateStudent) {
+                const newAct = { ...act, id: `act-${Date.now()}` };
+                onUpdateStudent({
+                  ...studentData,
+                  extracurriculars: [...(studentData.extracurriculars || []), newAct]
+                });
+              }
+            }}
+            onDeleteActivity={(id) => {
+              if (onUpdateStudent) {
+                onUpdateStudent({
+                  ...studentData,
+                  extracurriculars: (studentData.extracurriculars || []).filter(a => a.id !== id)
+                });
+              }
+            }}
+        /></AnimatedElement>;
+      case 'events':
+        return <AnimatedElement><EventManager 
+            user={user}
+            events={events}
+            onAddEvent={() => {}} 
+            onDeleteEvent={() => {}} 
+            mode="student"
+        /></AnimatedElement>;
       case 'exams':
         return <AnimatedElement><ExamPortal 
             studentId={user.id}
@@ -237,20 +299,233 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ user, onLogout, stu
             submissions={examSubmissions}
             onSubmitExam={onSubmitExam}
         /></AnimatedElement>;
+      case 'career':
+        return <AnimatedElement><CareerGuidance insight={{
+          courseName: studentData.department,
+          marketDemand: "High demand for specialized engineers in automation, AI, and sustainable technologies. Companies are actively seeking graduates with practical problem-solving skills.",
+          opportunities: ["Research & Development", "Product Management", "Software Architecture", "Systems Analysis", "Project Engineering"],
+          trends: ["Cloud Native Computing", "Edge AI", "Sustainable Tech", "Cybersecurity Mesh"],
+          skillValue: "A degree in this field combined with a strong portfolio is currently valued between $60k-$120k for entry-level roles globally.",
+          futureScope: "With the rapid digital transformation, the scope is expanding into aerospace, smart cities, and advanced robotics.",
+          earningPotential: {
+            paths: [
+              { title: "Entry Level", range: "₹6L - ₹12L PA" },
+              { title: "Mid Senior", range: "₹18L - ₹35L PA" },
+              { title: "Architect/CTO", range: "₹50L+ PA" }
+            ],
+            freelance: "Independent consultants in this field can earn up to $150/hr on platforms like Toptal or Upwork.",
+            roles: ["DevOps Engineer", "Data Scientist", "Full Stack Developer", "AI Engineer"]
+          }
+        }} /></AnimatedElement>;
       case 'files':
         return <AnimatedElement><FileManager mode="student" /></AnimatedElement>;
       case 'links':
         return <AnimatedElement><SharedLinksView /></AnimatedElement>;
-      case 'live':
-        return <AnimatedElement><LiveClassesView liveClasses={liveClasses} /></AnimatedElement>;
-      default:
-        return null;
-    }
-  };
+      case 'papers':
+        return (
+          <AnimatedElement>
+            <div className="bg-gray-800/50 p-6 rounded-xl border border-gray-700">
+              <h3 className="text-xl font-bold text-white mb-6">Question Papers</h3>
+              <div className="overflow-x-auto">
+                <table className="w-full text-left">
+                  <thead className="border-b border-gray-700">
+                    <tr className="text-gray-400 text-sm">
+                      <th className="pb-4 font-semibold">Subject</th>
+                      <th className="pb-4 font-semibold">Exam Type</th>
+                      <th className="pb-4 font-semibold">Year</th>
+                      <th className="pb-4 font-semibold">Semester</th>
+                      <th className="pb-4 font-semibold">Download</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-700">
+                    {questionPapers.map(paper => (
+                      <tr key={paper.id} className="text-gray-300">
+                        <td className="py-4">{paper.subject}</td>
+                        <td className="py-4">{paper.examType}</td>
+                        <td className="py-4">{paper.year}</td>
+                        <td className="py-4">{paper.semester}</td>
+                        <td className="py-4">
+                          <a 
+                            href={paper.fileUrl} 
+                            download 
+                            className="text-indigo-400 hover:text-indigo-300 font-medium flex items-center gap-2"
+                          >
+                            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a2 2 0 002 2h12a2 2 0 002-2v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                            </svg>
+                            Download
+                          </a>
+                        </td>
+                      </tr>
+                    ))}
+                    {questionPapers.length === 0 && (
+                      <tr>
+                        <td colSpan={5} className="py-10 text-center text-gray-500 italic">No question papers available.</td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </AnimatedElement>
+        );
+      case 'hostel':
+        return (
+          <AnimatedElement>
+            <div className="bg-gray-800/50 p-6 rounded-xl border border-gray-700 max-w-2xl mx-auto">
+              <div className="flex justify-between items-center mb-6">
+                <h3 className="text-xl font-bold text-white">Submit a Complaint</h3>
+                <div className="flex bg-gray-900 rounded-lg p-1">
+                  <button 
+                    onClick={() => setComplaintType('general')}
+                    className={`px-4 py-1.5 text-xs font-bold rounded-md transition-all ${complaintType === 'general' ? 'bg-indigo-600 text-white' : 'text-gray-400 hover:text-gray-200'}`}
+                  >
+                    General
+                  </button>
+                  <button 
+                    onClick={() => setComplaintType('hostel')}
+                    className={`px-4 py-1.5 text-xs font-bold rounded-md transition-all ${complaintType === 'hostel' ? 'bg-indigo-600 text-white' : 'text-gray-400 hover:text-gray-200'}`}
+                  >
+                    Hostel
+                  </button>
+                </div>
+              </div>
+
+              <form 
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  const form = e.target as HTMLFormElement;
+                  const formData = new FormData(form);
+                  const title = formData.get('title') as string;
+                  const description = formData.get('description') as string;
+
+                  if (complaintType === 'hostel') {
+                    onSubmitHostelComplaint({ title, description });
+                  } else {
+                    onSubmitComplaint({ subject: title, description });
+                  }
+                  
+                  form.reset();
+                  alert('Complaint submitted successfully!');
+                }}
+                className="space-y-4"
+              >
+                <div>
+                  <label className="block text-sm font-medium text-gray-400 mb-1">
+                    {complaintType === 'hostel' ? 'Complaint Title' : 'Subject'}
+                  </label>
+                  <input 
+                    name="title" 
+                    type="text" 
+                    required 
+                    placeholder={complaintType === 'hostel' ? "e.g. Water Issue, Electricity" : "e.g. Faculty, Facilities, Exam Schedule"} 
+                    className="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-400 mb-1">Description</label>
+                  <textarea 
+                    name="description" 
+                    required 
+                    rows={4} 
+                    placeholder="Describe the problem in detail..." 
+                    className="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  ></textarea>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-400 mb-1">Upload Evidence (Optional)</label>
+                  <input 
+                    type="file" 
+                    accept="image/*" 
+                    className="w-full text-sm text-gray-400 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-indigo-600 file:text-white hover:file:bg-indigo-700"
+                  />
+                </div>
+                <button 
+                  type="submit" 
+                  className="w-full py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-lg transition-all"
+                >
+                  Submit {complaintType === 'hostel' ? 'Hostel' : 'General'} Complaint
+                </button>
+              </form>
+            </div>
+          </AnimatedElement>
+        );
+      case 'library':
+        return (
+          <AnimatedElement>
+            <div className="bg-gray-800/50 p-6 rounded-xl border border-gray-700">
+              <h3 className="text-xl font-bold text-white mb-6">Library Self-Help Books</h3>
+              <div className="overflow-x-auto">
+                <table className="w-full text-left">
+                  <thead className="border-b border-gray-700">
+                    <tr className="text-gray-400 text-sm">
+                      <th className="pb-4 font-semibold">Book Name</th>
+                      <th className="pb-4 font-semibold">Author</th>
+                      <th className="pb-4 font-semibold">Category</th>
+                      <th className="pb-4 font-semibold">Availability</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-700">
+                    {librarySelfHelpBooks.map(book => (
+                      <tr key={book.id} className="text-gray-300">
+                        <td className="py-4 font-medium">{book.bookName}</td>
+                        <td className="py-4">{book.author}</td>
+                        <td className="py-4 text-sm text-gray-400">{book.category}</td>
+                        <td className="py-4">
+                          <span className={`px-2 py-1 rounded-full text-xs font-bold ${
+                            book.availability === 'Available' ? 'bg-green-600/20 text-green-400' :
+                            book.availability === 'Borrowed' ? 'bg-red-600/20 text-red-400' :
+                            'bg-yellow-600/20 text-yellow-400'
+                          }`}>
+                            {book.availability}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </AnimatedElement>
+        );
+      case 'pulse':
+        return <AnimatedElement><EmotionalPulse user={user} studentData={studentData} /></AnimatedElement>;
+      case 'scholarships':
+         return <AnimatedElement><Scholarships user={user} /></AnimatedElement>;
+       case 'passport':
+         return <AnimatedElement><SkillPassport user={user} /></AnimatedElement>;
+       case 'exchange':
+          return <AnimatedElement><SkillExchange user={user} /></AnimatedElement>;
+        case 'resources':
+          return <AnimatedElement><ResourceBooking user={user} /></AnimatedElement>;
+        case 'privacy':
+          return <AnimatedElement><ParentPrivacy user={user} /></AnimatedElement>;
+        case 'rooms':
+          return <AnimatedElement><StudyRooms user={user} /></AnimatedElement>;
+        case 'assignments':
+          return <AnimatedElement><AssignmentDualCheck user={user} /></AnimatedElement>;
+        case 'twin':
+          return <AnimatedElement><AIStudyTwin user={user} /></AnimatedElement>;
+        case 'notes':
+          return <AnimatedElement><NotesManager user={user} mode="student" /></AnimatedElement>;
+        case 'absent':
+          return <AnimatedElement><AbsentStudentView user={user} /></AnimatedElement>;
+        case 'support':
+          return <AnimatedElement><TroubleshootingDocumentation /></AnimatedElement>;
+        default:
+          return null;
+      }
+    };
 
   return (
     <>
-      <Header user={user} onLogout={onLogout} onOpenSettings={() => setIsSettingsOpen(true)} />
+      <Header 
+        user={user} 
+        onLogout={onLogout} 
+        onOpenSettings={() => setIsSettingsOpen(true)} 
+        notifications={notifications}
+        onMarkNotificationAsRead={onMarkNotificationAsRead}
+      />
        {isSettingsOpen && (
         <AccountSettings
             user={user}
@@ -271,69 +546,44 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ user, onLogout, stu
           <p className="text-gray-400 mb-6">Welcome back, {user.name}!</p>
         </AnimatedElement>
         
-        <AnimatedElement className="border-b border-gray-700 mb-6" delay={100}>
-          <nav className="-mb-px flex space-x-6" aria-label="Tabs">
-            <button
-              onClick={() => setActiveTab('overview')}
-              className={`tab-button py-3 px-1 font-medium text-sm text-gray-400 hover:text-white ${activeTab === 'overview' ? 'active' : ''}`}
-            >
-              Overview
-            </button>
-            <button
-              onClick={() => setActiveTab('live')}
-              className={`tab-button py-3 px-1 font-medium text-sm text-gray-400 hover:text-white ${activeTab === 'live' ? 'active' : ''}`}
-            >
-              Live Classes
-            </button>
-            <button
-              onClick={() => setActiveTab('progress')}
-              className={`tab-button py-3 px-1 font-medium text-sm text-gray-400 hover:text-white ${activeTab === 'progress' ? 'active' : ''}`}
-            >
-              Progress Tracker
-            </button>
-            <button
-              onClick={() => setActiveTab('exams')}
-              className={`tab-button py-3 px-1 font-medium text-sm text-gray-400 hover:text-white ${activeTab === 'exams' ? 'active' : ''}`}
-            >
-              Exam Portal
-            </button>
-            <button
-              onClick={() => setActiveTab('leave')}
-              className={`tab-button py-3 px-1 font-medium text-sm text-gray-400 hover:text-white ${activeTab === 'leave' ? 'active' : ''}`}
-            >
-              Leave Applications
-            </button>
-            <button
-              onClick={() => setActiveTab('attendance')}
-              className={`tab-button py-3 px-1 font-medium text-sm text-gray-400 hover:text-white ${activeTab === 'attendance' ? 'active' : ''}`}
-            >
-              Full Attendance Record
-            </button>
-            <button
-              onClick={() => setActiveTab('learning')}
-              className={`tab-button py-3 px-1 font-medium text-sm text-gray-400 hover:text-white ${activeTab === 'learning' ? 'active' : ''}`}
-            >
-                AI Learning Planner
-            </button>
-            <button
-              onClick={() => setActiveTab('files')}
-              className={`tab-button py-3 px-1 font-medium text-sm text-gray-400 hover:text-white ${activeTab === 'files' ? 'active' : ''}`}
-            >
-                Files
-            </button>
-            <button
-              onClick={() => setActiveTab('links')}
-              className={`tab-button py-3 px-1 font-medium text-sm text-gray-400 hover:text-white ${activeTab === 'links' ? 'active' : ''}`}
-            >
-                Important Links
-            </button>
-          </nav>
-        </AnimatedElement>
+        <AnimatedElement className="border-b border-gray-700 mb-6 sticky top-0 z-30 bg-gray-950/80 backdrop-blur-md" delay={100}>
+            <nav className="flex flex-wrap gap-2 p-1" aria-label="Tabs">
+                 {['overview', 'live', 'progress', 'attendance', 'leave', 'learning', 'activities', 'exams', 'events', 'career', 'files', 'links', 'papers', 'hostel', 'library', 'pulse', 'scholarships', 'passport', 'exchange', 'resources', 'privacy', 'rooms', 'assignments', 'twin', 'notes', 'absent', 'support'].map((tab) => (
+                   <button
+                     key={tab}
+                     onClick={() => setActiveTab(tab)}
+                     className={`tab-button px-4 py-2 text-sm font-bold rounded-xl transition-all ${
+                       activeTab === tab ? 'active bg-indigo-600/10 text-indigo-400' : 'text-gray-400 hover:text-gray-200'
+                     }`}
+                   >
+                     {tab === 'live' ? 'Live' : 
+                      tab === 'career' ? 'Career' : 
+                      tab === 'papers' ? 'Papers' :
+                      tab === 'hostel' ? 'Hostel' :
+                      tab === 'library' ? 'Library' :
+                      tab === 'pulse' ? 'Pulse' :
+                      tab === 'scholarships' ? 'Scholarships' :
+                      tab === 'passport' ? 'Skill Passport' :
+                      tab === 'exchange' ? 'Skill Exchange' :
+                      tab === 'resources' ? 'Resources' :
+                      tab === 'privacy' ? 'Privacy' :
+                      tab === 'rooms' ? 'Study Rooms' :
+                      tab === 'assignments' ? 'Assignments' :
+                      tab === 'twin' ? 'AI Study Twin' :
+                      tab === 'notes' ? 'Study Notes' :
+                      tab === 'absent' ? 'Absent View' :
+                      tab === 'support' ? 'Support' :
+                      tab.charAt(0).toUpperCase() + tab.slice(1)}
+                   </button>
+                 ))}
+            </nav>
+          </AnimatedElement>
 
         {renderContent()}
       </main>
       
       <Chatbot 
+        user={user}
         context={chatbotContext} 
         userRole={UserRole.Student} 
         actions={chatbotActions} 

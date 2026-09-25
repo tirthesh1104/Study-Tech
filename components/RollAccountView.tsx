@@ -5,7 +5,7 @@ interface RollAccountViewProps {
   attendance: AttendanceRecord[];
 }
 
-const RollAccountView: React.FC<RollAccountViewProps> = ({ attendance }) => {
+const RollAccountView: React.FC<RollAccountViewProps> = ({ attendance = [] }) => {
   // Sort records by date (most recent first)
   const sortedAttendance = [...attendance].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 

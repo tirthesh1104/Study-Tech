@@ -1,13 +1,29 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import LoginScreen from './components/LoginScreen';
+import LoginScreen from "./components/LoginScreen";
 import SignupScreen from './components/SignupScreen';
+import WelcomeScreen from './components/WelcomeScreen';
 import TeacherDashboard from './components/TeacherDashboard';
 import StudentDashboard from './components/StudentDashboard';
+import AdminDashboard from './components/AdminDashboard';
 import ParentDashboard from './components/ParentDashboard';
-import { BackgroundGradient } from './components/ui/BackgroundGradient';
 import useLocalStorage from './hooks/useLocalStorage';
-import { User, UserRole, Student, LearningPath, LeaveApplication, AttendanceRecord, Exam, ExamSubmission, LiveClass } from './types';
-import { MOCK_USERS, MOCK_STUDENTS, MOCK_EXAMS, MOCK_LIVE_CLASSES } from './data/mockData';
+import { User, UserRole, Student, LearningPath, LeaveApplication, AttendanceRecord, Exam, ExamSubmission, LiveClass, CampusEvent, AdminTask, AdminMeeting, Complaint, LibraryBook, AdminRole } from './types';
+import { 
+  MOCK_USERS, 
+  MOCK_STUDENTS, 
+  MOCK_EXAMS, 
+  MOCK_LIVE_CLASSES, 
+  MOCK_LEAVE_APPLICATIONS,
+  MOCK_QUESTION_PAPERS,
+  MOCK_HOSTEL_COMPLAINTS,
+  MOCK_LIBRARY_SELF_HELP_BOOKS,
+  MOCK_FACULTY_LEAVE_REQUESTS,
+  MOCK_NOTIFICATIONS,
+  MOCK_ADMIN_TASKS,
+  MOCK_ADMIN_MEETINGS,
+  MOCK_COMPLAINTS,
+  MOCK_CAMPUS_EVENTS
+} from './data/mockData';
 import AttendanceWarningScreen from './components/AttendanceWarningScreen';
 import useIdleTimer from './hooks/useIdleTimer';
 import IdleTimeoutModal from './components/IdleTimeoutModal';
@@ -19,12 +35,28 @@ const App: React.FC = () => {
   const [currentUser, setCurrentUser] = useLocalStorage<User | null>('currentUser', null);
   const [users, setUsers] = useLocalStorage<User[]>('users-list', MOCK_USERS);
   const [students, setStudents] = useLocalStorage<Student[]>('students-list', MOCK_STUDENTS);
-  const [leaveApplications, setLeaveApplications] = useLocalStorage<LeaveApplication[]>('leave-applications', []);
+  const [leaveApplications, setLeaveApplications] = useLocalStorage<LeaveApplication[]>('leave-applications', MOCK_LEAVE_APPLICATIONS);
   const [exams, setExams] = useLocalStorage<Exam[]>('exams-list', MOCK_EXAMS);
   const [examSubmissions, setExamSubmissions] = useLocalStorage<ExamSubmission[]>('exam-submissions', []);
   const [liveClasses, setLiveClasses] = useLocalStorage<LiveClass[]>('live-classes', MOCK_LIVE_CLASSES);
+  const [events, setEvents] = useLocalStorage<CampusEvent[]>('campus-events', MOCK_CAMPUS_EVENTS);
+  const [tasks, setTasks] = useLocalStorage<AdminTask[]>('admin-tasks', MOCK_ADMIN_TASKS);
+  const [meetings, setMeetings] = useLocalStorage<AdminMeeting[]>('admin-meetings', MOCK_ADMIN_MEETINGS);
+  const [complaints, setComplaints] = useLocalStorage<Complaint[]>('admin-complaints', MOCK_COMPLAINTS);
+  const [libraryBooks, setLibraryBooks] = useLocalStorage<LibraryBook[]>('library-books', [
+    { id: 'b1', title: 'The Pragmatic Programmer', author: 'Andrew Hunt', category: 'Tech', availableCopies: 5, totalCopies: 10, location: 'Shelf A1' },
+    { id: 'b2', title: 'Clean Code', author: 'Robert C. Martin', category: 'Tech', availableCopies: 2, totalCopies: 8, location: 'Shelf B2' }
+  ]);
+
+  // Student specific data
+  const [questionPapers, setQuestionPapers] = useLocalStorage<any[]>('question-papers', MOCK_QUESTION_PAPERS);
+  const [hostelComplaints, setHostelComplaints] = useLocalStorage<any[]>('hostel-complaints', MOCK_HOSTEL_COMPLAINTS);
+  const [librarySelfHelpBooks, setLibrarySelfHelpBooks] = useLocalStorage<any[]>('library-self-help', MOCK_LIBRARY_SELF_HELP_BOOKS);
+  const [notifications, setNotifications] = useLocalStorage<any[]>('notifications', MOCK_NOTIFICATIONS);
+  const [facultyLeaveRequests, setFacultyLeaveRequests] = useLocalStorage<any[]>('faculty-leave', MOCK_FACULTY_LEAVE_REQUESTS);
 
 
+  const [isWelcomeView, setIsWelcomeView] = useState(true);
   const [isLoginView, setIsLoginView] = useState(true);
   const [authError, setAuthError] = useState<string | null>(null);
   const [isIdlePromptVisible, setIsIdlePromptVisible] = useState(false);
@@ -35,47 +67,49 @@ const App: React.FC = () => {
   // This effect validates data loaded from localStorage on startup.
   // It prevents crashes from corrupted data (e.g., an object where an array is expected).
   useEffect(() => {
-    let dataWasCorrupted = false;
-    
-    if (!Array.isArray(users)) {
-      console.warn("Corrupted 'users' data in localStorage. Resetting.");
-      setUsers(MOCK_USERS);
-      dataWasCorrupted = true;
-    }
-    if (!Array.isArray(students)) {
-      console.warn("Corrupted 'students' data in localStorage. Resetting.");
-      setStudents(MOCK_STUDENTS);
-      dataWasCorrupted = true;
-    }
-    if (!Array.isArray(leaveApplications)) {
-      console.warn("Corrupted 'leaveApplications' data in localStorage. Resetting.");
-      setLeaveApplications([]);
-      dataWasCorrupted = true;
-    }
-    if (!Array.isArray(exams)) {
-      console.warn("Corrupted 'exams' data in localStorage. Resetting.");
-      setExams(MOCK_EXAMS);
-      dataWasCorrupted = true;
-    }
-    if (!Array.isArray(examSubmissions)) {
-      console.warn("Corrupted 'examSubmissions' data in localStorage. Resetting.");
-      setExamSubmissions([]);
-      dataWasCorrupted = true;
-    }
-    if (!Array.isArray(liveClasses)) {
-      console.warn("Corrupted 'liveClasses' data in localStorage. Resetting.");
-      setLiveClasses(MOCK_LIVE_CLASSES);
-      dataWasCorrupted = true;
-    }
+    try {
+      let dataWasCorrupted = false;
+      
+      if (!Array.isArray(users)) {
+        console.warn("Corrupted 'users' data in localStorage. Resetting.");
+        setUsers(MOCK_USERS);
+        dataWasCorrupted = true;
+      }
+      if (!Array.isArray(students)) {
+        console.warn("Corrupted 'students' data in localStorage. Resetting.");
+        setStudents(MOCK_STUDENTS);
+        dataWasCorrupted = true;
+      }
+      if (!Array.isArray(leaveApplications)) {
+        console.warn("Corrupted 'leaveApplications' data in localStorage. Resetting.");
+        setLeaveApplications([]);
+        dataWasCorrupted = true;
+      }
+      if (!Array.isArray(exams)) {
+        console.warn("Corrupted 'exams' data in localStorage. Resetting.");
+        setExams(MOCK_EXAMS);
+        dataWasCorrupted = true;
+      }
+      if (!Array.isArray(examSubmissions)) {
+        console.warn("Corrupted 'examSubmissions' data in localStorage. Resetting.");
+        setExamSubmissions([]);
+        dataWasCorrupted = true;
+      }
+      if (!Array.isArray(liveClasses)) {
+        console.warn("Corrupted 'liveClasses' data in localStorage. Resetting.");
+        setLiveClasses(MOCK_LIVE_CLASSES);
+        dataWasCorrupted = true;
+      }
 
-    if (dataWasCorrupted) {
-        // If data was reset, it's safer to log the user out to start fresh.
-        setCurrentUser(null);
+      if (dataWasCorrupted) {
+          setCurrentUser(null);
+      }
+    } catch (e) {
+      console.error("Error during data validation:", e);
+    } finally {
+      setIsDataValidated(true);
     }
-    
-    setIsDataValidated(true);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []); // This effect MUST run only once on initial load.
+  }, []);
   
   // This effect acts as a one-time data migration to ensure the
   // default student user has face scan enabled, addressing cases
@@ -97,6 +131,13 @@ const App: React.FC = () => {
               return { ...user, enableScanOnLogin: true };
             }
           }
+          
+          // Migration for Parent account to ensure childId is set
+          if (user.email === 'parent@school.com' && (!user.childId || user.childId === '')) {
+              needsUpdate = true;
+              return { ...user, childId: 'user-2' };
+          }
+
           return user;
         });
 
@@ -171,12 +212,17 @@ const App: React.FC = () => {
 
 
   const handleLogin = (email: string, pass: string) => {
+    if (!window.navigator.onLine) {
+      setAuthError('No Internet Connection: Please check your network and try again.');
+      return;
+    }
+
     const user = users.find(u => u.email === email && u.password === pass);
     if (user) {
       setCurrentUser(user);
       setAuthError(null);
     } else {
-      setAuthError('Invalid email or password.');
+      setAuthError('Invalid credentials. Please check your email and password.');
     }
   };
   
@@ -204,6 +250,11 @@ const App: React.FC = () => {
   };
 
   const handleSignup = (details: { name: string, email: string, role: UserRole, password: string, childEmail?: string, registeredPhotoUrl: string }) => {
+    if (!window.navigator.onLine) {
+      setAuthError('No Internet Connection: Please check your network and try again.');
+      return;
+    }
+    
     if (users.find(u => u.email === details.email)) {
       setAuthError('An account with this email already exists.');
       setIsLoginView(true);
@@ -389,6 +440,57 @@ const App: React.FC = () => {
     setLiveClasses(prev => prev.map(c => c.id === classId ? { ...c, status } : c));
   };
 
+  const handleAddEvent = (eventData: Omit<CampusEvent, 'id' | 'createdAt'>) => {
+    const newEvent: CampusEvent = {
+      ...eventData,
+      id: `event-${Date.now()}`,
+      createdAt: new Date().toISOString()
+    };
+    setEvents(prev => [...prev, newEvent]);
+  };
+
+  const handleDeleteEvent = (eventId: string) => {
+    setEvents(prev => prev.filter(e => e.id !== eventId));
+  };
+
+
+  const handleUpdateUserAccess = (userId: string, isBlocked: boolean) => {
+    setStudents(prev => prev.map(s => s.id === userId ? { ...s, isAccessBlocked: isBlocked } : s));
+  };
+
+  const handleDeleteUser = (userId: string) => {
+    setUsers(prev => prev.filter(u => u.id !== userId));
+    setStudents(prev => prev.filter(s => s.id !== userId));
+  };
+
+  const handleAssignTask = (taskData: Omit<AdminTask, 'id' | 'createdAt'>) => {
+    const newTask: AdminTask = { ...taskData, id: `task-${Date.now()}`, createdAt: new Date().toISOString() };
+    setTasks(prev => [...prev, newTask]);
+  };
+
+  const handleScheduleMeeting = (meetingData: Omit<AdminMeeting, 'id'>) => {
+    const newMeeting: AdminMeeting = { ...meetingData, id: `meet-${Date.now()}` };
+    setMeetings(prev => [...prev, newMeeting]);
+  };
+
+  const handleResolveComplaint = (id: string, comment: string) => {
+    setComplaints(prev => prev.map(c => c.id === id ? { ...c, status: 'Resolved', adminComment: comment } : c));
+  };
+
+  const handleResolveHostelComplaint = (id: string, status: 'Resolved' | 'In Progress') => {
+    setHostelComplaints(prev => prev.map(c => c.id === id ? { ...c, status } : c));
+  };
+
+  const handleAdminLogin = (email: string, pass: string) => {
+    const admin = users.find(u => u.email === email && u.password === pass && u.role === UserRole.Admin);
+    if (admin) {
+      setCurrentUser(admin);
+      setAuthError(null);
+    } else {
+      setAuthError('Access Denied: Invalid Admin Credentials');
+    }
+  };
+
 
   const renderDashboard = () => {
     if (!currentUser) return null;
@@ -405,15 +507,15 @@ const App: React.FC = () => {
 
     switch (currentUser.role) {
       case UserRole.Teacher:
-        return <TeacherDashboard 
-            user={currentUser} 
-            onLogout={handleLogout} 
-            students={students} 
-            setStudents={setStudents} 
-            onUpdateUser={handleUpdateUser} 
+        return <TeacherDashboard
+            user={currentUser}
+            onLogout={handleLogout}
+            students={students}
+            setStudents={setStudents}
+            onUpdateUser={handleUpdateUser}
             leaveApplications={leaveApplications}
             onUpdateLeaveStatus={handleUpdateLeaveStatus}
-            exams={exams.filter(e => e.createdBy === currentUser.id)}
+            exams={exams}
             examSubmissions={examSubmissions}
             onSaveExam={handleSaveExam}
             onDeleteExam={handleDeleteExam}
@@ -422,6 +524,44 @@ const App: React.FC = () => {
             onScheduleClass={handleScheduleClass}
             onDeleteClass={handleDeleteClass}
             onUpdateClassStatus={handleUpdateClassStatus}
+            events={events}
+            onAddEvent={handleAddEvent}
+            onDeleteEvent={handleDeleteEvent}
+            tasks={tasks.filter(t => t.assignedTo === currentUser.id)}
+            meetings={meetings.filter(m => m.invitedTeachers.includes(currentUser.id))}
+            questionPapers={questionPapers}
+            onUploadQuestionPaper={(paper) => setQuestionPapers([...questionPapers, { ...paper, id: `qp-${Date.now()}`, uploadedBy: currentUser.id, uploadedByName: currentUser.name, createdAt: new Date().toISOString() }])}
+            onDeleteQuestionPaper={(id) => setQuestionPapers(questionPapers.filter(p => p.id !== id))}
+            facultyLeaveRequests={facultyLeaveRequests.filter(r => r.facultyId === currentUser.id)}
+            onApplyFacultyLeave={(leave) => setFacultyLeaveRequests([...facultyLeaveRequests, { ...leave, id: `fl-${Date.now()}`, facultyId: currentUser.id, facultyName: currentUser.name, status: 'Pending', createdAt: new Date().toISOString(), currentLevel: 'HOD', approvalHistory: [] }])}
+            notifications={notifications.filter(n => n.userId === currentUser.id)}
+            onMarkNotificationAsRead={(id) => setNotifications(notifications.map(n => n.id === id ? { ...n, isRead: true } : n))}
+            hostelComplaints={hostelComplaints}
+            onResolveHostelComplaint={handleResolveHostelComplaint}
+            complaints={complaints}
+            onResolveComplaint={handleResolveComplaint}
+        />;
+      case UserRole.Admin:
+        return <AdminDashboard
+            user={currentUser}
+            onLogout={handleLogout}
+            users={users}
+            students={students}
+            onDeleteUser={handleDeleteUser}
+            onUpdateUserAccess={handleUpdateUserAccess}
+            tasks={tasks}
+            onAssignTask={handleAssignTask}
+            meetings={meetings}
+            onScheduleMeeting={handleScheduleMeeting}
+            complaints={complaints}
+            onResolveComplaint={handleResolveComplaint}
+            libraryBooks={libraryBooks}
+            onUpdateLibrary={setLibraryBooks}
+            events={events}
+            onAddEvent={handleAddEvent}
+            onDeleteEvent={handleDeleteEvent}
+            hostelComplaints={hostelComplaints}
+            onResolveHostelComplaint={handleResolveHostelComplaint}
         />;
       case UserRole.Student:
         const studentData = students.find(s => s.id === currentUser.id);
@@ -441,6 +581,9 @@ const App: React.FC = () => {
             onPlanUpdate={(learningPath) => {
                 setStudents(students.map(s => s.id === currentUser.id ? { ...s, learningPath } : s));
             }}
+            onUpdateStudent={(updatedStudent) => {
+                setStudents(students.map(s => s.id === updatedStudent.id ? updatedStudent : s));
+            }}
             onUpdateUser={handleUpdateUser}
             leaveApplications={leaveApplications.filter(app => app.studentId === currentUser.id)}
             onApplyForLeave={handleApplyForLeave}
@@ -448,6 +591,15 @@ const App: React.FC = () => {
             examSubmissions={examSubmissions.filter(s => s.studentId === currentUser.id)}
             onSubmitExam={handleSubmitExam}
             liveClasses={liveClasses}
+            events={events}
+            questionPapers={questionPapers}
+            onUploadQuestionPaper={(paper) => setQuestionPapers([...questionPapers, { ...paper, id: `qp-${Date.now()}`, uploadedBy: currentUser.id, uploadedByName: currentUser.name, createdAt: new Date().toISOString() }])}
+            hostelComplaints={hostelComplaints.filter(c => c.studentId === currentUser.id)}
+            onSubmitHostelComplaint={(complaint) => setHostelComplaints([...hostelComplaints, { ...complaint, id: `hc-${Date.now()}`, studentId: currentUser.id, studentName: currentUser.name, status: 'Pending', createdAt: new Date().toISOString() }])}
+            librarySelfHelpBooks={librarySelfHelpBooks}
+            notifications={notifications.filter(n => n.userId === currentUser.id)}
+            onMarkNotificationAsRead={(id) => setNotifications(notifications.map(n => n.id === id ? { ...n, isRead: true } : n))}
+            onSubmitComplaint={(complaint) => setComplaints([...complaints, { ...complaint, id: `c-${Date.now()}`, userId: currentUser.id, userName: currentUser.name, userRole: currentUser.role, status: 'Pending', createdAt: new Date().toISOString() }])}
         />;
       case UserRole.Parent:
          const childData = students.find(s => s.id === currentUser.childId);
@@ -486,34 +638,45 @@ const App: React.FC = () => {
   }
 
   return (
-    <div className="bg-gray-900 text-gray-100 font-sans">
+    <div className="bg-gray-900 text-gray-100 font-sans min-h-screen">
        <IdleTimeoutModal
         isOpen={isIdlePromptVisible}
         onClose={handleStayLoggedIn}
         onLogout={handleLogout}
         countdownTime={IDLE_PROMPT_MS}
       />
-      <BackgroundGradient>
-        {currentUser ? (
-          renderDashboard()
-        ) : isLoginView ? (
-          <LoginScreen
-            onLogin={handleLogin}
-            onSwitchToSignup={() => { setIsLoginView(false); setAuthError(null); }}
-            onProviderLogin={handleProviderLogin}
-            error={authError}
-            onClearError={clearAuthError}
-            users={users}
-          />
-        ) : (
-          <SignupScreen
-            onSignup={handleSignup}
-            onSwitchToLogin={() => { setIsLoginView(true); setAuthError(null); }}
-            onSocialLogin={handleSocialLogin}
-            error={authError}
-          />
-        )}
-      </BackgroundGradient>
+      {currentUser ? (
+        renderDashboard()
+      ) : isWelcomeView ? (
+        <WelcomeScreen 
+          onGetStarted={() => { setIsWelcomeView(false); setIsLoginView(false); }}
+          onLogin={() => { setIsWelcomeView(false); setIsLoginView(true); }}
+          onQuickParentLogin={() => {
+            const parent = MOCK_USERS.find(u => u.role === UserRole.Parent);
+            if (parent) {
+                setCurrentUser(parent);
+                setIsWelcomeView(false);
+            }
+          }}
+        />
+      ) : isLoginView ? (
+        <LoginScreen
+          onLogin={handleLogin}
+          onSwitchToSignup={() => { setIsLoginView(false); setAuthError(null); }}
+          onProviderLogin={handleProviderLogin}
+          onAdminLogin={handleAdminLogin}
+          error={authError}
+          onClearError={clearAuthError}
+          users={users}
+        />
+      ) : (
+        <SignupScreen
+          onSignup={handleSignup}
+          onSwitchToLogin={() => { setIsLoginView(true); setAuthError(null); }}
+          onSocialLogin={handleSocialLogin}
+          error={authError}
+        />
+      )}
     </div>
   );
 };

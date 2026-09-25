@@ -1,6 +1,6 @@
 
 import React, { useState, useMemo } from 'react';
-import { User, Student, LearningPath, AttendanceRecord, LeaveApplication, Exam, ExamSubmission, UserRole, LiveClass } from '../types';
+import { User, Student, LearningPath, AttendanceRecord, LeaveApplication, Exam, ExamSubmission, UserRole, LiveClass, CampusEvent, AdminTask, AdminMeeting, QuestionPaper, FacultyLeaveRequest, AppNotification, LeaveApprovalStatus, AdminRole } from '../types';
 import Header from './Header';
 import StudentDetailsView from './StudentDetailsView';
 import AttendanceCamera from './AttendanceCamera';
@@ -14,7 +14,17 @@ import AccountSettings from './AccountSettings';
 import LeaveRequestManager from './LeaveRequestManager';
 import ExamManager from './ExamManager';
 import LiveClassroom from './LiveClassroom';
+import ExtracurricularManager from './ExtracurricularManager';
+import EventManager from './EventManager';
 import Modal from './Modal';
+import LectureEngagement from './LectureEngagement';
+import WorkloadBalancer from './WorkloadBalancer';
+import ResourceBooking from './ResourceBooking';
+import AssignmentDualCheck from './AssignmentDualCheck';
+import TimetableManager from './TimetableManager';
+import NotesManager from './NotesManager';
+import StudyPlanManager from './StudyPlanManager';
+import ChatAnalytics from './ChatAnalytics';
 
 const ALL_SUBJECTS = [
     'Data Structures', 
@@ -44,14 +54,30 @@ interface TeacherDashboardProps {
   onScheduleClass: (newClass: LiveClass) => void;
   onDeleteClass: (classId: string) => void;
   onUpdateClassStatus: (classId: string, status: 'Live' | 'Completed') => void;
+  events: CampusEvent[];
+  onAddEvent: (event: Omit<CampusEvent, 'id' | 'createdAt'>) => void;
+  onDeleteEvent: (id: string) => void;
+  tasks: AdminTask[];
+  meetings: AdminMeeting[];
+  questionPapers: QuestionPaper[];
+  onUploadQuestionPaper: (paper: Omit<QuestionPaper, 'id' | 'uploadedBy' | 'uploadedByName' | 'createdAt'>) => void;
+  onDeleteQuestionPaper: (id: string) => void;
+  facultyLeaveRequests: FacultyLeaveRequest[];
+  onApplyFacultyLeave: (leaveData: Omit<FacultyLeaveRequest, 'id' | 'facultyId' | 'facultyName' | 'status' | 'approvalHistory' | 'createdAt' | 'currentLevel'>) => void;
+  notifications: AppNotification[];
+  onMarkNotificationAsRead: (id: string) => void;
+  hostelComplaints: any[];
+  onResolveHostelComplaint: (id: string, status: 'Resolved' | 'In Progress') => void;
+  complaints: any[];
+  onResolveComplaint: (id: string, comment: string) => void;
 }
 
-const TeacherDashboard: React.FC<TeacherDashboardProps> = ({ user, onLogout, students, setStudents, onUpdateUser, leaveApplications, onUpdateLeaveStatus, exams, examSubmissions, onSaveExam, onDeleteExam, onDeleteSubmission, liveClasses, onScheduleClass, onDeleteClass, onUpdateClassStatus }) => {
+const TeacherDashboard: React.FC<TeacherDashboardProps> = ({ user, onLogout, students, setStudents, onUpdateUser, leaveApplications, onUpdateLeaveStatus, exams, examSubmissions, onSaveExam, onDeleteExam, onDeleteSubmission, liveClasses, onScheduleClass, onDeleteClass, onUpdateClassStatus, events, onAddEvent, onDeleteEvent, tasks, meetings, questionPapers, onUploadQuestionPaper, onDeleteQuestionPaper, facultyLeaveRequests, onApplyFacultyLeave, notifications, onMarkNotificationAsRead, hostelComplaints, onResolveHostelComplaint, complaints, onResolveComplaint }) => {
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
   const [isCameraOpen, setIsCameraOpen] = useState(false);
   const [isQRScannerOpen, setIsQRScannerOpen] = useState(false);
   const [selectedSubject, setSelectedSubject] = useState<string>(ALL_SUBJECTS[0]);
-  const [activeTab, setActiveTab] = useState<'daily' | 'live' | 'records' | 'files' | 'links' | 'overview' | 'leave' | 'exams'>('daily');
+  const [activeTab, setActiveTab] = useState<'daily' | 'live' | 'records' | 'files' | 'links' | 'overview' | 'leave' | 'exams' | 'activities' | 'events' | 'tasks' | 'papers' | 'facultyLeave' | 'hostel' | 'complaints' | 'doubt_queue' | 'feedback' | 'workload' | 'resources' | 'assignments' | 'timetable' | 'notes' | 'chatanalytics'>('daily');
   const [scanStatus, setScanStatus] = useState<{ type: 'success' | 'error', message: string } | null>(null);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isAddStudentModalOpen, setIsAddStudentModalOpen] = useState(false);
@@ -284,7 +310,13 @@ const TeacherDashboard: React.FC<TeacherDashboardProps> = ({ user, onLogout, stu
 
   return (
     <>
-      <Header user={user} onLogout={onLogout} onOpenSettings={() => setIsSettingsOpen(true)} />
+      <Header 
+        user={user} 
+        onLogout={onLogout} 
+        onOpenSettings={() => setIsSettingsOpen(true)} 
+        notifications={notifications}
+        onMarkNotificationAsRead={onMarkNotificationAsRead}
+      />
        {isSettingsOpen && (
         <AccountSettings
             user={user}
@@ -361,64 +393,45 @@ const TeacherDashboard: React.FC<TeacherDashboardProps> = ({ user, onLogout, stu
           </div>
         )}
         
-        <AnimatedElement className="border-b border-gray-700 mb-6" delay={100}>
-          <nav className="-mb-px flex space-x-6" aria-label="Tabs">
-            <button
-              onClick={() => setActiveTab('daily')}
-              className={`tab-button py-3 px-1 font-medium text-sm text-gray-400 hover:text-white ${activeTab === 'daily' ? 'active' : ''}`}
-              aria-current={activeTab === 'daily' ? 'page' : undefined}
-            >
-              Daily Attendance
-            </button>
-             <button
-              onClick={() => setActiveTab('live')}
-              className={`tab-button py-3 px-1 font-medium text-sm text-gray-400 hover:text-white ${activeTab === 'live' ? 'active' : ''}`}
-              aria-current={activeTab === 'live' ? 'page' : undefined}
-            >
-              Live Class
-            </button>
-            <button
-              onClick={() => setActiveTab('leave')}
-              className={`tab-button py-3 px-1 font-medium text-sm text-gray-400 hover:text-white ${activeTab === 'leave' ? 'active' : ''}`}
-              aria-current={activeTab === 'leave' ? 'page' : undefined}
-            >
-              Leave Requests
-            </button>
-             <button
-              onClick={() => setActiveTab('exams')}
-              className={`tab-button py-3 px-1 font-medium text-sm text-gray-400 hover:text-white ${activeTab === 'exams' ? 'active' : ''}`}
-              aria-current={activeTab === 'exams' ? 'page' : undefined}
-            >
-              Manage Exams
-            </button>
-            <button
-              onClick={() => setActiveTab('records')}
-              className={`tab-button py-3 px-1 font-medium text-sm text-gray-400 hover:text-white ${activeTab === 'records' ? 'active' : ''}`}
-              aria-current={activeTab === 'records' ? 'page' : undefined}
-            >
-              Attendance Records
-            </button>
-             <button
-              onClick={() => setActiveTab('overview')}
-              className={`tab-button py-3 px-1 font-medium text-sm text-gray-400 hover:text-white ${activeTab === 'overview' ? 'active' : ''}`}
-              aria-current={activeTab === 'overview' ? 'page' : undefined}
-            >
-              Student Overview
-            </button>
-            <button
-              onClick={() => setActiveTab('files')}
-              className={`tab-button py-3 px-1 font-medium text-sm text-gray-400 hover:text-white ${activeTab === 'files' ? 'active' : ''}`}
-              aria-current={activeTab === 'files' ? 'page' : undefined}
-            >
-              Manage Files
-            </button>
-             <button
-              onClick={() => setActiveTab('links')}
-              className={`tab-button py-3 px-1 font-medium text-sm text-gray-400 hover:text-white ${activeTab === 'links' ? 'active' : ''}`}
-              aria-current={activeTab === 'links' ? 'page' : undefined}
-            >
-              Manage Links
-            </button>
+        <AnimatedElement className="border-b border-gray-700 mb-6 sticky top-0 z-30 bg-gray-950/80 backdrop-blur-md" delay={100}>
+          <nav className="flex flex-wrap gap-2 p-1">
+            {[
+              { id: 'daily', label: 'Attendance' },
+              { id: 'live', label: 'Live' },
+              { id: 'doubt_queue', label: 'Doubt Queue' },
+              { id: 'feedback', label: 'Feedback' },
+              { id: 'workload', label: 'Workload' },
+              { id: 'resources', label: 'Resources' },
+              { id: 'assignments', label: 'Assignments' },
+              { id: 'timetable', label: 'Timetable' },
+              { id: 'notes', label: 'Study Notes' },
+              { id: 'chatanalytics', label: 'Chat AI' },
+              { id: 'records', label: 'Records' },
+              { id: 'leave', label: 'Leave' },
+              { id: 'facultyLeave', label: 'My Leave' },
+              { id: 'exams', label: 'Exams' },
+              { id: 'events', label: 'Events' },
+              { id: 'tasks', label: 'Tasks' },
+              { id: 'activities', label: 'Activities' },
+              { id: 'papers', label: 'Papers' },
+              { id: 'overview', label: 'Students' },
+              { id: 'files', label: 'Files' },
+              { id: 'links', label: 'Links' },
+              { id: 'hostel', label: 'Hostel' },
+              { id: 'complaints', label: 'Complaints' },
+            ].map(tab => (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id as any)}
+                className={`tab-button px-4 py-2 text-sm font-bold rounded-xl transition-all ${
+                  activeTab === tab.id
+                    ? 'active bg-indigo-600/10 text-indigo-400'
+                    : 'text-gray-400 hover:text-gray-200'
+                }`}
+              >
+                {tab.label}
+              </button>
+            ))}
           </nav>
         </AnimatedElement>
         
@@ -617,6 +630,434 @@ const TeacherDashboard: React.FC<TeacherDashboardProps> = ({ user, onLogout, stu
           {activeTab === 'links' && (
             <LinkManager user={user} />
           )}
+
+          {activeTab === 'activities' && (
+            <div className="space-y-6">
+              <div className="bg-gray-800/50 p-6 rounded-xl border border-gray-700">
+                <h3 className="text-xl font-bold text-white mb-4">Student Extracurricular Tracking</h3>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                  {students.map(student => (
+                    <button
+                      key={student.id}
+                      onClick={() => setSelectedStudent(student)}
+                      className="flex items-center justify-between p-4 bg-gray-900 rounded-lg border border-gray-700 hover:border-indigo-500 transition-colors group"
+                    >
+                      <div className="text-left">
+                        <p className="font-medium text-white group-hover:text-indigo-400">{student.name}</p>
+                        <p className="text-xs text-gray-500">{(student.extracurriculars || []).length} activities</p>
+                      </div>
+                      <svg className="w-5 h-5 text-gray-600 group-hover:text-indigo-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                      </svg>
+                    </button>
+                  ))}
+                </div>
+              </div>
+              {selectedStudent && (
+                <ExtracurricularManager 
+                  student={selectedStudent} 
+                  mode="teacher"
+                  onAddActivity={() => {}} // Teacher doesn't add for student here
+                  onDeleteActivity={() => {}} // Teacher doesn't delete here
+                />
+              )}
+            </div>
+          )}
+
+          {activeTab === 'hostel' && (
+            <div className="space-y-6">
+              <h3 className="text-2xl font-bold text-white mb-6">Hostel Complaints</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {hostelComplaints.length > 0 ? hostelComplaints.map(complaint => (
+                  <div key={complaint.id} className="bg-gray-800/50 p-6 rounded-2xl border border-gray-700">
+                    <div className="flex justify-between items-start mb-4">
+                      <div>
+                        <h4 className="text-lg font-bold text-white">{complaint.title}</h4>
+                        <p className="text-sm text-gray-400">By: {complaint.studentName}</p>
+                      </div>
+                      <span className={`px-2 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest ${
+                        complaint.status === 'Resolved' ? 'bg-green-500/10 text-green-400' : 
+                        complaint.status === 'In Progress' ? 'bg-yellow-500/10 text-yellow-400' : 
+                        'bg-red-500/10 text-red-400'
+                      }`}>
+                        {complaint.status}
+                      </span>
+                    </div>
+                    <p className="text-gray-300 text-sm mb-6 line-clamp-3">{complaint.description}</p>
+                    <div className="flex gap-2">
+                      <button 
+                        onClick={() => onResolveHostelComplaint(complaint.id, 'In Progress')}
+                        className="flex-1 py-2 bg-yellow-500/10 text-yellow-500 border border-yellow-500/20 rounded-xl text-xs font-bold hover:bg-yellow-500/20 transition-all"
+                      >
+                        In Progress
+                      </button>
+                      <button 
+                        onClick={() => onResolveHostelComplaint(complaint.id, 'Resolved')}
+                        className="flex-1 py-2 bg-green-500/10 text-green-500 border border-green-500/20 rounded-xl text-xs font-bold hover:bg-green-500/20 transition-all"
+                      >
+                        Resolved
+                      </button>
+                    </div>
+                  </div>
+                )) : (
+                  <div className="col-span-full text-center py-20 text-gray-500 italic">No hostel complaints reported.</div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {activeTab === 'complaints' && (
+            <div className="space-y-6">
+              <h3 className="text-2xl font-bold text-white mb-6">General Student Complaints</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {complaints.length > 0 ? complaints.map(complaint => (
+                  <div key={complaint.id} className="bg-gray-800/50 p-6 rounded-2xl border border-gray-700">
+                    <div className="flex justify-between items-start mb-4">
+                      <div>
+                        <h4 className="text-lg font-bold text-white">{complaint.subject}</h4>
+                        <p className="text-sm text-gray-400">By: {complaint.userName} ({complaint.userRole})</p>
+                      </div>
+                      <span className={`px-2 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest ${
+                        complaint.status === 'Resolved' ? 'bg-green-500/10 text-green-400' : 
+                        complaint.status === 'Investigating' ? 'bg-yellow-500/10 text-yellow-400' : 
+                        'bg-red-500/10 text-red-400'
+                      }`}>
+                        {complaint.status}
+                      </span>
+                    </div>
+                    <p className="text-gray-300 text-sm mb-6 line-clamp-3">{complaint.description}</p>
+                    {complaint.status !== 'Resolved' && (
+                      <button 
+                        onClick={() => onResolveComplaint(complaint.id, "Resolved by Teacher")}
+                        className="w-full py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold transition-all"
+                      >
+                        Mark as Resolved
+                      </button>
+                    )}
+                  </div>
+                )) : (
+                  <div className="col-span-full text-center py-20 text-gray-500 italic">No general complaints reported.</div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {activeTab === 'doubt_queue' && (
+            <LectureEngagement user={user} sessionId="session-123" isTeacher />
+          )}
+
+          {activeTab === 'feedback' && (
+            <LectureEngagement user={user} sessionId="session-123" isTeacher />
+          )}
+
+          {activeTab === 'workload' && (
+             <WorkloadBalancer user={user} />
+           )}
+
+           {activeTab === 'resources' && (
+             <ResourceBooking user={user} />
+           )}
+
+           {activeTab === 'assignments' && (
+             <AssignmentDualCheck user={user} isTeacher />
+           )}
+
+           {activeTab === 'timetable' && (
+             <TimetableManager user={user} />
+           )}
+
+           {activeTab === 'notes' && (
+             <div className="space-y-8">
+               <StudyPlanManager user={user} />
+               <NotesManager user={user} mode="teacher" />
+             </div>
+           )}
+
+           {activeTab === 'chatanalytics' && (
+             <ChatAnalytics />
+           )}
+
+          {activeTab === 'events' && (
+            <EventManager 
+              user={user}
+              events={events}
+              onAddEvent={onAddEvent}
+              onDeleteEvent={onDeleteEvent}
+              mode="teacher"
+            />
+          )}
+
+          {activeTab === 'tasks' && (
+            <div className="space-y-6">
+              <h3 className="text-2xl font-bold text-white mb-6">Assigned Tasks & Meetings</h3>
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                <div className="space-y-4">
+                  <h4 className="text-sm font-black text-gray-500 uppercase tracking-widest">Admin Tasks</h4>
+                  {tasks.length > 0 ? tasks.map(task => (
+                    <div key={task.id} className="bg-gray-800/40 p-6 rounded-2xl border border-gray-700/50">
+                      <h5 className="font-bold text-white text-lg">{task.title}</h5>
+                      <p className="text-gray-400 text-sm mt-1">{task.description}</p>
+                      <div className="flex justify-between items-center mt-4 pt-4 border-t border-gray-700/50">
+                        <span className="text-xs text-indigo-400 font-bold">Due: {task.deadline}</span>
+                        <span className="px-2 py-1 bg-yellow-500/10 text-yellow-500 rounded-lg text-[10px] font-black uppercase tracking-tighter">{task.status}</span>
+                      </div>
+                    </div>
+                  )) : <p className="text-gray-500 italic">No tasks assigned yet.</p>}
+                </div>
+                <div className="space-y-4">
+                  <h4 className="text-sm font-black text-gray-500 uppercase tracking-widest">Upcoming Meetings</h4>
+                  {meetings.length > 0 ? meetings.map(meet => (
+                    <div key={meet.id} className="bg-indigo-600/10 p-6 rounded-2xl border border-indigo-500/20">
+                      <h5 className="font-bold text-white text-lg">{meet.title}</h5>
+                      <p className="text-indigo-300 text-sm mt-1">{meet.date} at {meet.time}</p>
+                      <a href={meet.meetLink} target="_blank" rel="noopener noreferrer" className="mt-4 inline-block px-4 py-2 bg-indigo-600 text-white rounded-xl text-xs font-bold hover:bg-indigo-700 transition-all">
+                        Open Google Meet
+                      </a>
+                    </div>
+                  )) : <p className="text-gray-500 italic">No meetings scheduled.</p>}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {activeTab === 'papers' && (
+            <div className="space-y-8">
+              {/* Existing Question Paper UI */}
+              <div className="bg-gray-800/50 p-6 rounded-xl border border-gray-700">
+                <h3 className="text-xl font-bold text-white mb-6">Upload Question Paper</h3>
+                <form 
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    const form = e.target as HTMLFormElement;
+                    const formData = new FormData(form);
+                    onUploadQuestionPaper({
+                      subject: formData.get('subject') as string,
+                      examType: formData.get('examType') as any,
+                      year: formData.get('year') as string,
+                      semester: formData.get('semester') as string,
+                      fileUrl: '#', 
+                    });
+                    form.reset();
+                    alert('Question paper uploaded successfully!');
+                  }}
+                  className="grid grid-cols-1 md:grid-cols-2 gap-6"
+                >
+                  <div>
+                    <label className="block text-sm font-medium text-gray-400 mb-1">Subject Name</label>
+                    <select name="subject" required className="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-2 text-white">
+                      {ALL_SUBJECTS.map(s => <option key={s} value={s}>{s}</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-400 mb-1">Exam Type</label>
+                    <select name="examType" required className="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-2 text-white">
+                      <option value="Midterm">Midterm</option>
+                      <option value="Final">Final</option>
+                      <option value="Assignment">Assignment</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-400 mb-1">Year</label>
+                    <input name="year" type="text" required placeholder="e.g. 2023" className="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-2 text-white" />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-400 mb-1">Semester</label>
+                    <input name="semester" type="text" required placeholder="e.g. 5th" className="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-2 text-white" />
+                  </div>
+                  <div className="md:col-span-2">
+                    <label className="block text-sm font-medium text-gray-400 mb-1">Upload File (PDF/JPG/PNG)</label>
+                    <input type="file" accept=".pdf,image/*" required className="w-full text-sm text-gray-400 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-indigo-600 file:text-white hover:file:bg-indigo-700" />
+                  </div>
+                  <div className="md:col-span-2">
+                    <button type="submit" className="w-full py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-lg transition-all">
+                      Upload Paper
+                    </button>
+                  </div>
+                </form>
+              </div>
+
+              <div className="bg-gray-800/50 p-6 rounded-xl border border-gray-700">
+                <h3 className="text-xl font-bold text-white mb-6">Your Uploaded Papers</h3>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left">
+                    <thead className="border-b border-gray-700">
+                      <tr className="text-gray-400 text-sm">
+                        <th className="pb-4">Subject</th>
+                        <th className="pb-4">Type</th>
+                        <th className="pb-4">Year/Sem</th>
+                        <th className="pb-4">Date</th>
+                        <th className="pb-4 text-right">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-700">
+                      {questionPapers.filter(p => p.uploadedBy === user.id).map(paper => (
+                        <tr key={paper.id} className="text-gray-300">
+                          <td className="py-4">{paper.subject}</td>
+                          <td className="py-4">{paper.examType}</td>
+                          <td className="py-4">{paper.year} ({paper.semester})</td>
+                          <td className="py-4 text-sm">{new Date(paper.createdAt).toLocaleDateString()}</td>
+                          <td className="py-4 text-right">
+                            <button onClick={() => onDeleteQuestionPaper(paper.id)} className="text-red-400 hover:text-red-300">
+                              Delete
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {activeTab === 'facultyLeave' && (
+            <div className="space-y-8">
+              {/* Leave Application Form */}
+              <div className="bg-gray-800/50 p-8 rounded-2xl border border-gray-700">
+                <h3 className="text-2xl font-bold text-white mb-6 flex items-center gap-2">
+                  <svg className="w-6 h-6 text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                  </svg>
+                  Apply for Leave
+                </h3>
+                <form 
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    const form = e.target as HTMLFormElement;
+                    const formData = new FormData(form);
+                    const start = new Date(formData.get('startDate') as string);
+                    const end = new Date(formData.get('endDate') as string);
+                    const diffTime = Math.abs(end.getTime() - start.getTime());
+                    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
+
+                    onApplyFacultyLeave({
+                      leaveType: formData.get('leaveType') as string,
+                      startDate: formData.get('startDate') as string,
+                      endDate: formData.get('endDate') as string,
+                      totalDays: diffDays,
+                      reason: formData.get('reason') as string,
+                    });
+                    form.reset();
+                    alert('Leave request submitted to HOD!');
+                  }}
+                  className="grid grid-cols-1 md:grid-cols-2 gap-6"
+                >
+                  <div className="md:col-span-2">
+                    <label className="block text-sm font-medium text-gray-400 mb-2">Leave Type</label>
+                    <select name="leaveType" required className="w-full bg-gray-900 border border-gray-700 rounded-xl px-4 py-3 text-white focus:ring-2 focus:ring-indigo-500 transition-all">
+                      <option value="Casual Leave">Casual Leave</option>
+                      <option value="Medical Leave">Medical Leave</option>
+                      <option value="Earned Leave">Earned Leave</option>
+                      <option value="Maternity Leave">Maternity Leave</option>
+                      <option value="Duty Leave">Duty Leave</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-400 mb-2">Start Date</label>
+                    <input name="startDate" type="date" required className="w-full bg-gray-900 border border-gray-700 rounded-xl px-4 py-3 text-white" />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-400 mb-2">End Date</label>
+                    <input name="endDate" type="date" required className="w-full bg-gray-900 border border-gray-700 rounded-xl px-4 py-3 text-white" />
+                  </div>
+                  <div className="md:col-span-2">
+                    <label className="block text-sm font-medium text-gray-400 mb-2">Reason</label>
+                    <textarea name="reason" required rows={3} className="w-full bg-gray-900 border border-gray-700 rounded-xl px-4 py-3 text-white" placeholder="Provide a detailed reason..."></textarea>
+                  </div>
+                  <div className="md:col-span-2">
+                    <label className="block text-sm font-medium text-gray-400 mb-2">Attachment (Optional)</label>
+                    <input type="file" className="w-full text-sm text-gray-400 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-indigo-600 file:text-white hover:file:bg-indigo-700" />
+                  </div>
+                  <div className="md:col-span-2">
+                    <button type="submit" className="w-full py-4 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-bold rounded-xl shadow-lg transition-all transform hover:scale-[1.02]">
+                      Submit Application
+                    </button>
+                  </div>
+                </form>
+              </div>
+
+              {/* Leave Tracking Timeline */}
+              <div className="space-y-6">
+                <h3 className="text-2xl font-bold text-white mb-6">Your Leave History & Tracking</h3>
+                {facultyLeaveRequests.length > 0 ? facultyLeaveRequests.map(req => (
+                  <div key={req.id} className="bg-gray-800/40 p-6 rounded-2xl border border-gray-700 overflow-hidden">
+                    <div className="flex flex-col lg:flex-row justify-between gap-6 mb-8">
+                      <div>
+                        <div className="flex items-center gap-3 mb-2">
+                          <h4 className="text-xl font-bold text-white">{req.leaveType}</h4>
+                          <span className={`px-3 py-1 rounded-full text-xs font-bold ${
+                            req.status === LeaveApprovalStatus.Approved ? 'bg-green-600/20 text-green-400' :
+                            req.status === LeaveApprovalStatus.Rejected ? 'bg-red-600/20 text-red-400' :
+                            'bg-yellow-600/20 text-yellow-400'
+                          }`}>
+                            {req.status}
+                          </span>
+                        </div>
+                        <p className="text-gray-400 text-sm">ID: {req.id} • Applied on {new Date(req.createdAt).toLocaleDateString()}</p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-indigo-400 font-bold text-lg">{req.startDate} to {req.endDate}</p>
+                        <p className="text-gray-500 text-sm">{req.totalDays} Days Total</p>
+                      </div>
+                    </div>
+
+                    {/* Timeline Tracker */}
+                    <div className="relative mt-10 mb-6">
+                      <div className="absolute top-1/2 left-0 w-full h-1 bg-gray-700 -translate-y-1/2 rounded-full"></div>
+                      <div className="relative flex justify-between">
+                        {[AdminRole.HOD, AdminRole.Office, AdminRole.Dean, AdminRole.Principal, AdminRole.HR].map((role, idx) => {
+                          const approval = req.approvalHistory.find(h => h.role === role);
+                          const isRejected = approval?.status === LeaveApprovalStatus.Rejected;
+                          const isApproved = approval?.status === LeaveApprovalStatus.Approved;
+                          const isCurrent = req.currentLevel === role && req.status !== LeaveApprovalStatus.Rejected && req.status !== LeaveApprovalStatus.Approved;
+                          
+                          return (
+                            <div key={role} className="flex flex-col items-center gap-3 relative z-10">
+                              <div className={`w-10 h-10 rounded-full flex items-center justify-center border-4 ${
+                                isApproved ? 'bg-green-600 border-green-900 text-white' :
+                                isRejected ? 'bg-red-600 border-red-900 text-white' :
+                                isCurrent ? 'bg-yellow-600 border-yellow-900 text-white animate-pulse' :
+                                'bg-gray-800 border-gray-700 text-gray-500'
+                              }`}>
+                                {isApproved ? '✓' : isRejected ? '✗' : idx + 1}
+                              </div>
+                              <div className="text-center">
+                                <p className={`text-xs font-black uppercase tracking-tighter ${
+                                  isApproved ? 'text-green-400' :
+                                  isRejected ? 'text-red-400' :
+                                  isCurrent ? 'text-yellow-400' :
+                                  'text-gray-500'
+                                }`}>
+                                  {role}
+                                </p>
+                                {approval?.comment && (
+                                  <p className="text-[10px] text-gray-400 max-w-[80px] mt-1 line-clamp-2 italic">"{approval.comment}"</p>
+                                )}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    {req.status === LeaveApprovalStatus.Rejected && (
+                      <div className="mt-6 p-4 bg-red-600/10 border border-red-500/20 rounded-xl">
+                        <p className="text-red-400 text-sm font-bold flex items-center gap-2">
+                          <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd"></path></svg>
+                          Application Rejected by {req.approvalHistory[req.approvalHistory.length-1]?.role}
+                        </p>
+                        <p className="text-gray-400 text-sm mt-1">Reason: {req.approvalHistory[req.approvalHistory.length-1]?.comment || 'No reason provided.'}</p>
+                      </div>
+                    )}
+                  </div>
+                )) : (
+                  <div className="text-center py-20 bg-gray-800/20 rounded-2xl border border-gray-700 border-dashed">
+                    <p className="text-gray-500 italic">No leave applications found.</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
         </AnimatedElement>
       </main>
 
@@ -640,6 +1081,7 @@ const TeacherDashboard: React.FC<TeacherDashboardProps> = ({ user, onLogout, stu
         />
       )}
       <Chatbot 
+        user={user}
         context={chatbotContext} 
         userRole={UserRole.Teacher} 
         actions={chatbotActions} 

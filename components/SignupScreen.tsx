@@ -62,6 +62,8 @@ const SignupScreen: React.FC<SignupScreenProps> = ({ onSignup, onSwitchToLogin, 
         return;
       }
       setIsFaceScanVisible(true);
+    } else {
+      alert("Please fill in all required fields.");
     }
   };
   
@@ -92,10 +94,19 @@ const SignupScreen: React.FC<SignupScreenProps> = ({ onSignup, onSwitchToLogin, 
           <div className="p-8 space-y-6 bg-gray-800/50 backdrop-blur-sm rounded-2xl shadow-2xl border border-gray-700">
             <div className="text-center space-y-2">
               <div className="flex justify-center items-center gap-2">
-                <svg className="h-10 w-10 text-indigo-400" width="24" height="24" viewBox="0 0 24 24" strokeWidth="2" stroke="currentColor" fill="none" strokeLinecap="round" strokeLinejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none" /><path d="M3 19a9 9 0 0 1 9 0a9 9 0 0 1 9 0" /><path d="M3 6a9 9 0 0 1 9 0a9 9 0 0 1 9 0" /><line x1="3" y1="6" x2="3" y2="19" /><line x1="12" y1="6" x2="12" y2="19" /><line x1="21" y1="6" x2="21" y2="19" /></svg>
-                <h1 className="text-3xl font-bold text-white tracking-tight">Smart Curriculum</h1>
+                <div className="p-2 bg-indigo-600 rounded-lg shadow-md shadow-indigo-600/20">
+                  <svg className="h-8 w-8 text-white" width="24" height="24" viewBox="0 0 24 24" strokeWidth="2" stroke="currentColor" fill="none" strokeLinecap="round" strokeLinejoin="round">
+                    <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+                    <path d="M3 19a9 9 0 0 1 9 0a9 9 0 0 1 9 0" />
+                    <path d="M3 6a9 9 0 0 1 9 0a9 9 0 0 1 9 0" />
+                    <line x1="3" y1="6" x2="3" y2="19" />
+                    <line x1="12" y1="6" x2="12" y2="19" />
+                    <line x1="21" y1="6" x2="21" y2="19" />
+                  </svg>
+                </div>
+                <h1 className="text-3xl font-bold text-white tracking-tight">Smart<span className="text-indigo-500">Campus</span></h1>
               </div>
-              <h2 className="text-2xl font-bold text-white">Create your account</h2>
+              <h2 className="text-2xl font-bold text-white pt-4">Create your account</h2>
               <p className="text-gray-400">
                 Already have an account?{' '}
                 <button onClick={onSwitchToLogin} className="font-medium text-indigo-400 hover:text-indigo-500">
@@ -134,6 +145,7 @@ const SignupScreen: React.FC<SignupScreenProps> = ({ onSignup, onSwitchToLogin, 
                     <option value={UserRole.Student}>Student</option>
                     <option value={UserRole.Teacher}>Teacher</option>
                     <option value={UserRole.Parent}>Parent</option>
+                    <option value={UserRole.Admin}>Admin</option>
                  </select>
               </div>
               {role === UserRole.Parent && (

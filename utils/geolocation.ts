@@ -1,10 +1,11 @@
 // Precise geo-fence polygon for the MIT College of Railway Engineering & Research, Barshi campus.
 // These coordinates define the virtual boundary for on-campus access.
+// Updated to center around the specific campus coordinate: 18.2574324250659, 75.71991343973882
 export const CAMPUS_POLYGON: { latitude: number; longitude: number }[] = [
-  { latitude: 18.25815, longitude: 75.71890 }, // North-West corner (near entrance)
-  { latitude: 18.25745, longitude: 75.72242 }, // North-East corner
-  { latitude: 18.25435, longitude: 75.72175 }, // South-East corner
-  { latitude: 18.25525, longitude: 75.71830 }, // South-West corner
+  { latitude: 18.2584324250659, longitude: 75.71891343973882 }, // North-West corner
+  { latitude: 18.2584324250659, longitude: 75.72091343973882 }, // North-East corner
+  { latitude: 18.2564324250659, longitude: 75.72091343973882 }, // South-East corner
+  { latitude: 18.2564324250659, longitude: 75.71891343973882 }, // South-West corner
 ];
 
 /**

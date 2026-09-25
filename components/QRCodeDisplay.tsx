@@ -8,9 +8,10 @@ declare var QRCode: any;
 interface QRCodeDisplayProps {
   user: User;
   location: GeolocationCoordinates;
+  onComplete?: () => void;
 }
 
-const QRCodeDisplay: React.FC<QRCodeDisplayProps> = ({ user, location }) => {
+const QRCodeDisplay: React.FC<QRCodeDisplayProps> = ({ user, location, onComplete }) => {
   const [qrCodeUrl, setQrCodeUrl] = useState<string | null>(null);
   const [expiresIn, setExpiresIn] = useState(60);
   const [error, setError] = useState<string | null>(null);
@@ -65,13 +66,22 @@ const QRCodeDisplay: React.FC<QRCodeDisplayProps> = ({ user, location }) => {
           <Spinner />
         )}
       </div>
-      <div className="mt-4 text-center">
+      <div className="mt-4 text-center space-y-4">
         {expiresIn > 0 ? (
            <p className="text-lg text-yellow-400">
              Expires in: <span className="font-bold text-2xl">{expiresIn}s</span>
            </p>
         ) : (
            <p className="text-lg font-bold text-red-500">QR Code Expired</p>
+        )}
+        
+        {onComplete && (
+            <button 
+                onClick={onComplete}
+                className="w-full mt-4 px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl shadow-lg transition-all hover:scale-105 active:scale-95"
+            >
+                Done
+            </button>
         )}
       </div>
     </div>

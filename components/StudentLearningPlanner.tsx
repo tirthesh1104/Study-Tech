@@ -41,7 +41,7 @@ const StudentLearningPlanner: React.FC<StudentLearningPlannerProps> = ({ student
     setPlannerState('generating');
     setError(null);
 
-    const path = await generateStudentInitiatedLearningPath(formData, student.name);
+    const path = await generateStudentInitiatedLearningPath(student.name, formData);
 
     if (path) {
       onPlanGenerated(path);

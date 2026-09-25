@@ -35,7 +35,7 @@ const AttendanceCheckinFlow: React.FC<AttendanceCheckinFlowProps> = ({ user, onC
             />
         );
       case 'display_qr':
-        return <QRCodeDisplay user={user} location={location} />;
+        return <QRCodeDisplay user={user} location={location} onComplete={onClose} />;
       default:
         return null;
     }

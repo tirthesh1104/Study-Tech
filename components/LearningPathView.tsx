@@ -24,7 +24,7 @@ const LearningPathView: React.FC<LearningPathViewProps> = ({ learningPath }) => 
       <p className="text-gray-300 mb-6 italic">"{learningPath.overall_summary}"</p>
 
       <div className="space-y-4">
-        {learningPath.daily_plan.map((day, index) => (
+        {(learningPath.daily_plan || []).map((day, index) => (
           <div key={index} className="bg-gray-900/50 p-4 rounded-lg border border-gray-700 transition-all duration-300 hover:border-indigo-500 hover:shadow-lg">
             <h3 className="text-lg font-semibold text-white flex items-center gap-2">
                 <span className="text-xl">{iconMap[day.day] || '🗓️'}</span>

@@ -32,7 +32,7 @@ const AIInsights: React.FC<{ student: Student }> = ({ student }) => {
             }
         };
 
-        if (student.progress.length > 0) {
+        if (student.progress && student.progress.length > 0) {
             fetchInsights();
         } else {
             setIsLoading(false);

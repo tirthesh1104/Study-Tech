@@ -4,6 +4,7 @@ import Modal from './Modal';
 import RollAccountView from './RollAccountView';
 import LearningPathGenerator from './LearningPathGenerator';
 import LearningPathView from './LearningPathView';
+import ExtracurricularManager from './ExtracurricularManager';
 
 interface StudentDetailsViewProps {
   student: Student;
@@ -35,6 +36,15 @@ const StudentDetailsView: React.FC<StudentDetailsViewProps> = ({ student, onClos
         </div>
         
         {student.learningPath && <LearningPathView learningPath={student.learningPath} />}
+        
+        <div className="bg-gray-900/50 p-6 rounded-xl border border-gray-700">
+          <ExtracurricularManager 
+            student={student} 
+            mode="teacher" 
+            onAddActivity={() => {}} 
+            onDeleteActivity={() => {}} 
+          />
+        </div>
         
         <LearningPathGenerator student={student} onPlanGenerated={onPlanGenerated} />
         

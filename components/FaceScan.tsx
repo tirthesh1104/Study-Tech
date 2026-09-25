@@ -19,26 +19,6 @@ type FaceScanProps = {
   }
 );
 
-// Helper to convert a data URL string to a base64 string (without the prefix)
-const getBase64FromDataUrl = (dataUrl: string): string => {
-    return dataUrl.split(',')[1];
-};
-
-// Helper to fetch a URL (like pravatar) and convert it to a base64 string
-const fetchAndConvertToBase64 = async (url: string): Promise<string> => {
-    const response = await fetch(url);
-    if (!response.ok) {
-      throw new Error('Failed to fetch registered image');
-    }
-    const blob = await response.blob();
-    return new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onloadend = () => resolve((reader.result as string).split(',')[1]);
-        reader.onerror = reject;
-        reader.readAsDataURL(blob);
-    });
-};
-
 
 const FaceScan: React.FC<FaceScanProps> = ({ onSuccess, onClose, title, mode, registeredPhotoUrl }) => {
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -156,15 +136,15 @@ const FaceScan: React.FC<FaceScanProps> = ({ onSuccess, onClose, title, mode, re
                 window.setTimeout(() => {
                     stopCamera();
                     onSuccess(imageDataUrl);
-                }, 1500);
+                }, 500);
             } else {
                 setStatus('idle');
                 setError('Could not capture image from camera.');
                 setMessage('');
                 setScanStepMessage('');
             }
-        }, 1500);
-      }, 1500);
+        }, 500);
+      }, 500);
     }, 100);
   }, [mode, onSuccess, stopCamera]);
   
@@ -183,19 +163,10 @@ const FaceScan: React.FC<FaceScanProps> = ({ onSuccess, onClose, title, mode, re
     }
 
     try {
-        setScanStepMessage('Preparing images for AI analysis...');
-        const liveImageBase64 = getBase64FromDataUrl(liveImageDataUrl);
-        
-        // Check if localRegisteredImageUrl is a data URL or a regular URL that needs fetching
-        const registeredImageBase64 = localRegisteredImageUrl.startsWith('data:')
-            ? getBase64FromDataUrl(localRegisteredImageUrl)
-            : await fetchAndConvertToBase64(localRegisteredImageUrl);
-        
         setScanStepMessage('Verifying with AI... This may take a moment.');
-        const result = await verifyFaceMatch(registeredImageBase64, liveImageBase64);
+        const result = await verifyFaceMatch(localRegisteredImageUrl, liveImageDataUrl);
 
-        // Stricter validation to ensure the entire AI response object is well-formed.
-        if (result && typeof result.isMatch === 'boolean' && typeof result.confidence === 'number' && typeof result.reason === 'string') {
+        if (result) {
             setConfidence(result.confidence);
             if (result.isMatch && result.confidence >= 80) { // Using 80 as confidence threshold
                 setComparisonStatus('success');
@@ -204,14 +175,14 @@ const FaceScan: React.FC<FaceScanProps> = ({ onSuccess, onClose, title, mode, re
                 window.setTimeout(() => {
                     stopCamera();
                     onSuccess();
-                }, 2000);
+                }, 1000); // Reduced from 2000 to 1000 for faster login
             } else {
                 setComparisonStatus('fail');
                 setMessage(`❌ Verification Failed. Confidence: ${result.confidence.toFixed(1)}%`);
                 setScanStepMessage(result.reason || "Low confidence score. Please try again.");
             }
         } else {
-            // Handle null or malformed response from verifyFaceMatch.
+            // Handle null response, which indicates an error in the service.
             setComparisonStatus('fail');
             setMessage('An error occurred during verification.');
             setScanStepMessage('The AI service returned an invalid response. Please try again.');
@@ -340,16 +311,47 @@ const FaceScan: React.FC<FaceScanProps> = ({ onSuccess, onClose, title, mode, re
               </div>
             </div>
             
-             <div className="h-16 my-2 flex flex-col justify-center">
+             <div className="my-2 flex flex-col justify-center">
                  <p className={`text-lg font-medium transition-colors duration-300 ${
                      comparisonStatus === 'success' ? 'text-green-400' :
                      comparisonStatus === 'fail' ? 'text-red-400' : 'text-gray-300'
                  }`}>{message}</p>
                  <p className="text-sm h-5 text-cyan-400">{scanStepMessage}</p>
-                 {comparisonStatus === 'comparing' && (
-                    <div className="w-full bg-gray-600 rounded-full h-2.5 mt-2">
-                      <div className="bg-cyan-400 h-2.5 rounded-full" style={{ width: `${confidence}%`, transition: 'width 1.5s ease-in-out' }}></div>
-                    </div>
+
+                 {/* ── Accuracy bar: shows during comparing AND after result ── */}
+                 {(comparisonStatus === 'comparing' || comparisonStatus === 'success' || comparisonStatus === 'fail') && (
+                   <div className="mt-3">
+                     <div className="flex justify-between items-center mb-1">
+                       <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Match Accuracy</span>
+                       <span className={`text-sm font-bold ${
+                         comparisonStatus === 'success' ? 'text-green-400' :
+                         comparisonStatus === 'fail' ? 'text-red-400' : 'text-cyan-400'
+                       }`}>
+                         {comparisonStatus === 'comparing' ? 'Analyzing...' : `${confidence.toFixed(1)}%`}
+                       </span>
+                     </div>
+                     <div className="w-full bg-gray-700 rounded-full h-3 overflow-hidden border border-gray-600">
+                       <div
+                         className={`h-3 rounded-full transition-all duration-1000 ease-in-out ${
+                           comparisonStatus === 'success' ? 'bg-gradient-to-r from-green-500 to-green-400' :
+                           comparisonStatus === 'fail' ? 'bg-gradient-to-r from-red-500 to-red-400' :
+                           'bg-gradient-to-r from-cyan-500 to-cyan-400 animate-pulse'
+                         }`}
+                         style={{ width: comparisonStatus === 'comparing' ? '60%' : `${confidence}%` }}
+                       />
+                     </div>
+                     {comparisonStatus !== 'comparing' && (
+                       <div className="flex justify-between mt-1">
+                         <span className="text-[10px] text-gray-500">0%</span>
+                         <span className={`text-[10px] font-semibold ${
+                           comparisonStatus === 'success' ? 'text-green-500' : 'text-red-500'
+                         }`}>
+                           {comparisonStatus === 'success' ? '✅ Identity Verified' : '❌ No Match'}
+                         </span>
+                         <span className="text-[10px] text-gray-500">100%</span>
+                       </div>
+                     )}
+                   </div>
                  )}
              </div>
 

@@ -7,6 +7,29 @@ interface ExamTakerProps {
   onSubmit: (answers: { [questionId: string]: string }, status: 'Completed' | 'Blocked') => void;
 }
 
+const WarningModal: React.FC<{ onDismiss: () => void }> = ({ onDismiss }) => (
+  <div className="fixed inset-0 bg-black bg-opacity-80 backdrop-blur-sm z-[60] flex items-center justify-center p-4">
+    <div className="bg-gray-800 rounded-2xl p-8 w-full max-w-md text-center shadow-2xl border border-yellow-500/50">
+      <h2 className="text-3xl font-bold text-yellow-300 mb-4">Warning!</h2>
+      <p className="text-gray-200 text-lg">You have navigated away from the exam tab. This is your first and final warning.</p>
+      <p className="text-red-400 font-semibold mt-4">If this happens again, your exam will be automatically submitted and blocked.</p>
+      <button onClick={onDismiss} className="mt-8 px-8 py-3 bg-indigo-600 text-white font-bold rounded-lg hover:bg-indigo-700">
+        I Understand, Return to Exam
+      </button>
+    </div>
+  </div>
+);
+
+const BlockedOverlay = () => (
+  <div className="absolute inset-0 bg-gray-900/95 z-20 flex items-center justify-center p-4 text-center">
+    <div>
+      <h1 className="text-3xl font-bold text-red-400">Exam Blocked</h1>
+      <p className="text-lg text-gray-300 mt-2">Your exam has been automatically submitted due to a violation of the rules (navigating away from the exam tab).</p>
+      <p className="text-gray-400 mt-4">Please contact your teacher for further instructions.</p>
+    </div>
+  </div>
+);
+
 const ExamTaker: React.FC<ExamTakerProps> = ({ exam, onClose, onSubmit }) => {
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [answers, setAnswers] = useState<{ [questionId: string]: string }>({});
@@ -96,32 +119,6 @@ const ExamTaker: React.FC<ExamTakerProps> = ({ exam, onClose, onSubmit }) => {
     return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
   };
 
-  // Renders a modal for the first cheating warning
-  const WarningModal = () => (
-     <div className="fixed inset-0 bg-black bg-opacity-80 backdrop-blur-sm z-[60] flex items-center justify-center p-4">
-        <div className="bg-gray-800 rounded-2xl p-8 w-full max-w-md text-center shadow-2xl border border-yellow-500/50">
-            <h2 className="text-3xl font-bold text-yellow-300 mb-4">Warning!</h2>
-            <p className="text-gray-200 text-lg">You have navigated away from the exam tab. This is your first and final warning.</p>
-            <p className="text-red-400 font-semibold mt-4">If this happens again, your exam will be automatically submitted and blocked.</p>
-            <button onClick={() => setIsWarningVisible(false)} className="mt-8 px-8 py-3 bg-indigo-600 text-white font-bold rounded-lg hover:bg-indigo-700">
-                I Understand, Return to Exam
-            </button>
-        </div>
-    </div>
-  );
-
-  // Renders an overlay when the exam is blocked
-  const BlockedOverlay = () => (
-     <div className="absolute inset-0 bg-gray-900/95 z-10 flex items-center justify-center p-4 text-center">
-         <div>
-            <h1 className="text-3xl font-bold text-red-400">Exam Blocked</h1>
-            <p className="text-lg text-gray-300 mt-2">Your exam has been automatically submitted due to a violation of the rules (navigating away from the exam tab).
-            </p>
-            <p className="text-gray-400 mt-4">Please contact your teacher for further instructions.</p>
-         </div>
-     </div>
-  );
-
   // BUG FIX: Use Array.isArray to prevent crash if exam.questions is malformed (e.g., an object instead of an array).
   if (!Array.isArray(exam.questions) || exam.questions.length === 0) {
     return (
@@ -136,11 +133,29 @@ const ExamTaker: React.FC<ExamTakerProps> = ({ exam, onClose, onSubmit }) => {
   }
 
   const currentQuestion: Question = exam.questions[currentQuestionIndex];
+
+  // Additional safety check for malformed question data
+  if (!currentQuestion || !currentQuestion.text || !Array.isArray(currentQuestion.options)) {
+    return (
+        <div className="fixed inset-0 bg-gray-900 z-50 flex items-center justify-center p-4 text-white">
+            <div className="text-center">
+                <h1 className="text-2xl font-bold text-red-400">Question Error</h1>
+                <p className="text-gray-300 mt-2">Could not display question data. It may be corrupted or incomplete.</p>
+                <div className="mt-6 flex gap-4 justify-center">
+                    <button onClick={() => setCurrentQuestionIndex(prev => Math.max(0, prev - 1))} className="px-6 py-2 bg-gray-700 rounded-lg hover:bg-gray-600">Previous</button>
+                    <button onClick={onClose} className="px-6 py-2 bg-gray-600 rounded-lg hover:bg-gray-700">Exit Exam</button>
+                    <button onClick={() => setCurrentQuestionIndex(prev => Math.min(exam.questions.length - 1, prev + 1))} className="px-6 py-2 bg-gray-700 rounded-lg hover:bg-gray-600">Next</button>
+                </div>
+            </div>
+        </div>
+    );
+  }
+
   const progress = ((currentQuestionIndex + 1) / exam.questions.length) * 100;
   
   return (
     <div className="fixed inset-0 bg-gray-900 z-50 grid grid-rows-[auto_1fr_auto] p-4 sm:p-8 text-white">
-      {isWarningVisible && <WarningModal />}
+      {isWarningVisible && <WarningModal onDismiss={() => setIsWarningVisible(false)} />}
       
       <header className="flex justify-between items-center mb-4 pb-4 border-b border-gray-700">
         <div>
@@ -157,27 +172,27 @@ const ExamTaker: React.FC<ExamTakerProps> = ({ exam, onClose, onSubmit }) => {
         </div>
       </header>
       
-      <main className="overflow-y-auto relative">
+      <main className="overflow-y-auto relative z-10">
         {isBlocked && <BlockedOverlay />}
         <div className="w-full bg-gray-700 rounded-full h-2.5 mb-4">
             <div className="bg-indigo-600 h-2.5 rounded-full" style={{ width: `${progress}%`, transition: 'width 0.3s' }}></div>
         </div>
-        <div className="bg-gray-800 p-6 rounded-lg">
+        <div className="bg-gray-800 p-6 rounded-lg relative">
             <h2 className="text-xl font-semibold text-gray-300 mb-2">Question {currentQuestionIndex + 1} of {exam.questions.length}</h2>
             <p className="text-lg text-white mb-6 min-h-[56px]">{currentQuestion.text}</p>
             <div className="space-y-4">
                 {currentQuestion.options.map((option, idx) => (
-                    <label key={idx} className={`flex items-center p-4 bg-gray-900/50 rounded-lg border-2 hover:border-indigo-500 cursor-pointer transition-colors ${answers[currentQuestion.id] === option ? 'border-indigo-500' : 'border-gray-700'}`}>
+                    <label key={idx} className={`flex items-center p-4 bg-gray-900/50 rounded-lg border-2 hover:border-indigo-500 cursor-pointer transition-colors relative ${answers[currentQuestion.id] === option ? 'border-indigo-500' : 'border-gray-700'}`}>
                         <input
                             type="radio"
                             name={currentQuestion.id}
                             value={option}
                             checked={answers[currentQuestion.id] === option}
                             onChange={() => handleSelectAnswer(currentQuestion.id, option)}
-                            className="w-5 h-5 text-indigo-600 bg-gray-700 border-gray-600 focus:ring-indigo-500"
+                            className="w-5 h-5 text-indigo-600 bg-gray-700 border-gray-600 focus:ring-indigo-500 relative z-20"
                             disabled={isBlocked}
                         />
-                        <span className="ml-4 text-gray-200">{option}</span>
+                        <span className="ml-4 text-gray-200 relative z-20">{option}</span>
                     </label>
                 ))}
             </div>

@@ -43,7 +43,7 @@ const PersonalizedSuggestions: React.FC<PersonalizedSuggestionsProps> = ({ child
       </div>
       <h3 className="text-xl font-bold text-white mb-2">Unlock Your Child's Potential</h3>
       <p className="text-gray-400 mb-6 max-w-xl mx-auto">
-        Get AI-powered suggestions for courses, workshops, and activities tailored to {childData.name}'s academic profile and interests.
+        Get AI-powered suggestions for courses, workshops, and activities tailored to {childData?.name || 'your child'}'s academic profile and interests.
       </p>
       <button
         onClick={handleGenerate}
@@ -57,7 +57,7 @@ const PersonalizedSuggestions: React.FC<PersonalizedSuggestionsProps> = ({ child
 
   const renderSuggestions = () => (
     <div>
-      <h3 className="text-2xl font-bold text-white mb-4">AI-Powered Suggestions for {childData.name}</h3>
+      <h3 className="text-2xl font-bold text-white mb-4">AI-Powered Suggestions for {childData?.name || 'your child'}</h3>
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {suggestions?.map((item, index) => (
           <AnimatedElement key={index} delay={index * 100}>
@@ -95,7 +95,7 @@ const PersonalizedSuggestions: React.FC<PersonalizedSuggestionsProps> = ({ child
       {isLoading ? (
         <div className="flex flex-col items-center justify-center min-h-[200px]">
           <Spinner />
-          <p className="mt-4 text-gray-300">Finding the best activities for {childData.name}...</p>
+          <p className="mt-4 text-gray-300">Finding the best activities for {childData?.name || 'your child'}...</p>
         </div>
       ) : error ? (
         <div className="text-center text-red-400 p-4 bg-red-900/20 rounded-lg">
