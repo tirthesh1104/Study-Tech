@@ -232,7 +232,9 @@ export interface ExamSubmission {
   answers: { [questionId: string]: string }; // questionId: selectedAnswer
   submittedAt: number; // timestamp
   score: number; // percentage
-  status: 'Completed' | 'Blocked';
+  status: 'Completed' | 'Blocked' | 'Cancelled';
+  tabSwitchCount?: number;
+  copyCount?: number;
 }
 
 // --- New Live Class Types ---

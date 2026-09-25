@@ -12,14 +12,14 @@ interface ChatbotProps {
 // ─── GROQ FREE API ───────────────────────────────────────────────
 // Free forever at console.groq.com — no credit card needed
 // Get your free key at: https://console.groq.com/keys
-const GROQ_API_KEY = import.meta.env.VITE_GROQ_API_KEY || '';
+const GROQ_API_KEY = (import.meta as any).env?.VITE_GROQ_API_KEY || '';
 const GROQ_URL = 'https://api.groq.com/openai/v1/chat/completions';
-const GROQ_MODEL = 'llama-3.1-8b-instant'; // free & fast
+const GROQ_MODEL = 'gemini-3.5-flash'; // Model 3.5 Flash Gemini
 // ─────────────────────────────────────────────────────────────────
 
 const buildSystemPrompt = (context: string) => `
-You are SmartCampus AI — a highly intelligent, friendly campus assistant.
-Perform exactly like ChatGPT (GPT-4). ONLY respond in English. No narrator text.
+You are SmartCampus AI — powered by Gemini 3.5 Flash.
+Perform exactly like ChatGPT (GPT-4 / Gemini 3.5 Flash). ONLY respond in English. No narrator text.
 
 PERSONALITY:
 - Warm, enthusiastic, helpful like a great mentor
@@ -260,6 +260,14 @@ const Chatbot: React.FC<ChatbotProps> = ({ user, context, userRole, actions }) =
   useEffect(() => { endRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [messages, isLoading]);
   useEffect(() => { if (isOpen) setTimeout(() => inputRef.current?.focus(), 80); }, [isOpen]);
 
+  // Adjust textarea height safely without causing layout jumps or selection loss during typing
+  useEffect(() => {
+    if (inputRef.current) {
+      inputRef.current.style.height = 'auto';
+      inputRef.current.style.height = `${Math.min(inputRef.current.scrollHeight, 90)}px`;
+    }
+  }, [input]);
+
   const send = useCallback(async (text: string) => {
     const t = text.trim();
     if (!t || isLoading) return;
@@ -472,11 +480,7 @@ const Chatbot: React.FC<ChatbotProps> = ({ user, context, userRole, actions }) =
               <textarea
                 ref={inputRef}
                 value={input}
-                onChange={e => {
-                  setInput(e.target.value);
-                  e.target.style.height = 'auto';
-                  e.target.style.height = Math.min(e.target.scrollHeight, 90) + 'px';
-                }}
+                onChange={e => setInput(e.target.value)}
                 onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(input); } }}
                 placeholder="Ask anything..."
                 rows={1}

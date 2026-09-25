@@ -4,7 +4,7 @@ import { Exam, Question } from '../types';
 interface ExamTakerProps {
   exam: Exam;
   onClose: () => void;
-  onSubmit: (answers: { [questionId: string]: string }, status: 'Completed' | 'Blocked') => void;
+  onSubmit: (answers: { [questionId: string]: string }, status: 'Completed' | 'Blocked' | 'Cancelled', tabSwitchCount?: number, copyCount?: number) => void;
 }
 
 const WarningModal: React.FC<{ onDismiss: () => void }> = ({ onDismiss }) => (
@@ -37,48 +37,75 @@ const ExamTaker: React.FC<ExamTakerProps> = ({ exam, onClose, onSubmit }) => {
   const [warnings, setWarnings] = useState(0);
   const [isWarningVisible, setIsWarningVisible] = useState(false);
   const [isBlocked, setIsBlocked] = useState(false);
-  
-  // Use a ref for answers and warnings to prevent stale closures in callbacks
+  const [tabSwitchCount, setTabSwitchCount] = useState(0);
+  const [copyCount, setCopyCount] = useState(0);
+
+  // Use refs to prevent stale closures in callbacks
   const answersRef = useRef(answers);
   useEffect(() => { answersRef.current = answers; }, [answers]);
   const warningsRef = useRef(warnings);
   useEffect(() => { warningsRef.current = warnings; }, [warnings]);
+  const tabSwitchCountRef = useRef(tabSwitchCount);
+  useEffect(() => { tabSwitchCountRef.current = tabSwitchCount; }, [tabSwitchCount]);
+  const copyCountRef = useRef(copyCount);
+  useEffect(() => { copyCountRef.current = copyCount; }, [copyCount]);
 
-  // Anti-cheating visibility change listener
+  // Anti-cheating visibility and blur listener (track tab / window switching)
   useEffect(() => {
     const handleVisibilityChange = () => {
-        if (document.hidden) {
-            // Ignore visibility change if modals are open or exam is already blocked
-            if (isWarningVisible || isBlocked) return;
+      if (document.hidden) {
+        setTabSwitchCount(prev => prev + 1);
 
-            const newWarningCount = warningsRef.current + 1;
-            warningsRef.current = newWarningCount;
-            setWarnings(newWarningCount);
+        if (isWarningVisible || isBlocked) return;
 
-            if (newWarningCount === 1) {
-                setIsWarningVisible(true);
-            } else if (newWarningCount >= 2) {
-                setIsBlocked(true);
-                // Force submit the exam with a 'Blocked' status
-                onSubmit(answersRef.current, 'Blocked');
-            }
+        const newWarningCount = warningsRef.current + 1;
+        warningsRef.current = newWarningCount;
+        setWarnings(newWarningCount);
+
+        if (newWarningCount === 1) {
+          setIsWarningVisible(true);
+        } else if (newWarningCount >= 2) {
+          setIsBlocked(true);
+          // Force submit the exam with a 'Blocked' status
+          onSubmit(answersRef.current, 'Blocked', tabSwitchCountRef.current + 1, copyCountRef.current);
         }
+      }
+    };
+
+    const handleBlur = () => {
+      setTabSwitchCount(prev => prev + 1);
     };
 
     document.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('blur', handleBlur);
+
     return () => {
-        document.removeEventListener('visibilitychange', handleVisibilityChange);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('blur', handleBlur);
     };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isWarningVisible, isBlocked, onSubmit]);
 
+  // Track copy and cut operations
+  useEffect(() => {
+    const handleCopyOrCut = () => {
+      setCopyCount(prev => prev + 1);
+    };
+
+    window.addEventListener('copy', handleCopyOrCut);
+    window.addEventListener('cut', handleCopyOrCut);
+
+    return () => {
+      window.removeEventListener('copy', handleCopyOrCut);
+      window.removeEventListener('cut', handleCopyOrCut);
+    };
+  }, []);
 
   // Memoize the submit callback
-  const handleFinalSubmit = useCallback((status: 'Completed' | 'Blocked' = 'Completed') => {
-    onSubmit(answersRef.current, status);
+  const handleFinalSubmit = useCallback((status: 'Completed' | 'Blocked' | 'Cancelled' = 'Completed') => {
+    onSubmit(answersRef.current, status, tabSwitchCountRef.current, copyCountRef.current);
   }, [onSubmit]);
 
-  // Start a stable interval timer when the component mounts
+  // Timer interval
   useEffect(() => {
     if (timeLeft <= 0 || isBlocked) return;
 
@@ -89,140 +116,164 @@ const ExamTaker: React.FC<ExamTakerProps> = ({ exam, onClose, onSubmit }) => {
     return () => clearInterval(timerId);
   }, [isBlocked, timeLeft]);
 
-  // Watch for when the timer reaches zero to trigger submission
+  // Auto-submit when time reaches zero
   useEffect(() => {
     if (timeLeft === 0 && !isBlocked) {
       handleFinalSubmit('Completed');
     }
   }, [timeLeft, handleFinalSubmit, isBlocked]);
 
-
   const handleManualSubmit = () => {
     if (window.confirm('Are you sure you want to submit your answers? This action cannot be undone.')) {
       handleFinalSubmit('Completed');
     }
   };
-  
+
+  const handleCancelExam = () => {
+    if (window.confirm('Are you sure you want to cancel this exam? Your exam session will be marked as Cancelled.')) {
+      handleFinalSubmit('Cancelled');
+      onClose();
+    }
+  };
+
   const handleClose = () => {
     if (window.confirm('Are you sure you want to exit? Your progress will not be saved.')) {
-        onClose();
+      onClose();
     }
   };
 
   const handleSelectAnswer = (questionId: string, answer: string) => {
     setAnswers(prev => ({ ...prev, [questionId]: answer }));
   };
-  
+
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
     return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
   };
 
-  // BUG FIX: Use Array.isArray to prevent crash if exam.questions is malformed (e.g., an object instead of an array).
   if (!Array.isArray(exam.questions) || exam.questions.length === 0) {
     return (
-        <div className="fixed inset-0 bg-gray-900 z-50 flex items-center justify-center p-4 text-white">
-            <div className="text-center">
-                <h1 className="text-2xl font-bold text-red-400">Exam Error</h1>
-                <p className="text-gray-300 mt-2">This exam has no questions and cannot be taken.</p>
-                <button onClick={onClose} className="mt-4 px-6 py-2 bg-gray-600 rounded-lg hover:bg-gray-700">Go Back</button>
-            </div>
+      <div className="fixed inset-0 bg-gray-900 z-50 flex items-center justify-center p-4 text-white">
+        <div className="text-center">
+          <h1 className="text-2xl font-bold text-red-400">Exam Error</h1>
+          <p className="text-gray-300 mt-2">This exam has no questions and cannot be taken.</p>
+          <button onClick={onClose} className="mt-4 px-6 py-2 bg-gray-600 rounded-lg hover:bg-gray-700">Go Back</button>
         </div>
+      </div>
     );
   }
 
   const currentQuestion: Question = exam.questions[currentQuestionIndex];
 
-  // Additional safety check for malformed question data
   if (!currentQuestion || !currentQuestion.text || !Array.isArray(currentQuestion.options)) {
     return (
-        <div className="fixed inset-0 bg-gray-900 z-50 flex items-center justify-center p-4 text-white">
-            <div className="text-center">
-                <h1 className="text-2xl font-bold text-red-400">Question Error</h1>
-                <p className="text-gray-300 mt-2">Could not display question data. It may be corrupted or incomplete.</p>
-                <div className="mt-6 flex gap-4 justify-center">
-                    <button onClick={() => setCurrentQuestionIndex(prev => Math.max(0, prev - 1))} className="px-6 py-2 bg-gray-700 rounded-lg hover:bg-gray-600">Previous</button>
-                    <button onClick={onClose} className="px-6 py-2 bg-gray-600 rounded-lg hover:bg-gray-700">Exit Exam</button>
-                    <button onClick={() => setCurrentQuestionIndex(prev => Math.min(exam.questions.length - 1, prev + 1))} className="px-6 py-2 bg-gray-700 rounded-lg hover:bg-gray-600">Next</button>
-                </div>
-            </div>
+      <div className="fixed inset-0 bg-gray-900 z-50 flex items-center justify-center p-4 text-white">
+        <div className="text-center">
+          <h1 className="text-2xl font-bold text-red-400">Question Error</h1>
+          <p className="text-gray-300 mt-2">Could not display question data. It may be corrupted or incomplete.</p>
+          <div className="mt-6 flex gap-4 justify-center">
+            <button onClick={() => setCurrentQuestionIndex(prev => Math.max(0, prev - 1))} className="px-6 py-2 bg-gray-700 rounded-lg hover:bg-gray-600">Previous</button>
+            <button onClick={onClose} className="px-6 py-2 bg-gray-600 rounded-lg hover:bg-gray-700">Exit Exam</button>
+            <button onClick={() => setCurrentQuestionIndex(prev => Math.min(exam.questions.length - 1, prev + 1))} className="px-6 py-2 bg-gray-700 rounded-lg hover:bg-gray-600">Next</button>
+          </div>
         </div>
+      </div>
     );
   }
 
   const progress = ((currentQuestionIndex + 1) / exam.questions.length) * 100;
-  
+
   return (
     <div className="fixed inset-0 bg-gray-900 z-50 grid grid-rows-[auto_1fr_auto] p-4 sm:p-8 text-white">
       {isWarningVisible && <WarningModal onDismiss={() => setIsWarningVisible(false)} />}
-      
+
       <header className="flex justify-between items-center mb-4 pb-4 border-b border-gray-700">
         <div>
           <h1 className="text-2xl font-bold">{exam.title}</h1>
           <p className="text-gray-400">{exam.subject}</p>
         </div>
         <div className="flex items-center gap-4">
-            <div className={`text-2xl font-bold ${timeLeft < 60 ? 'text-red-500 animate-pulse' : 'text-yellow-400'}`}>
-                {formatTime(timeLeft)}
-            </div>
-            <button onClick={handleClose} className="text-gray-400 hover:text-white" aria-label="Close exam">
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
-            </button>
+          <div className="flex items-center gap-3 text-xs bg-gray-800 px-3 py-1.5 rounded-lg border border-gray-700">
+            <span className="text-yellow-400">⚠️ Tab Switches: <strong>{tabSwitchCount}</strong></span>
+            <span className="text-indigo-400">📋 Copies: <strong>{copyCount}</strong></span>
+          </div>
+          <div className={`text-2xl font-bold ${timeLeft < 60 ? 'text-red-500 animate-pulse' : 'text-yellow-400'}`}>
+            {formatTime(timeLeft)}
+          </div>
+          <button
+            onClick={handleCancelExam}
+            className="px-3 py-1.5 bg-red-600/80 hover:bg-red-600 text-white font-semibold rounded-lg text-xs transition-colors flex items-center gap-1"
+            title="Cancel this exam"
+          >
+            🚫 Cancel Exam
+          </button>
+          <button onClick={handleClose} className="text-gray-400 hover:text-white" aria-label="Close exam">
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+          </button>
         </div>
       </header>
-      
+
       <main className="overflow-y-auto relative z-10">
         {isBlocked && <BlockedOverlay />}
         <div className="w-full bg-gray-700 rounded-full h-2.5 mb-4">
-            <div className="bg-indigo-600 h-2.5 rounded-full" style={{ width: `${progress}%`, transition: 'width 0.3s' }}></div>
+          <div className="bg-indigo-600 h-2.5 rounded-full" style={{ width: `${progress}%`, transition: 'width 0.3s' }}></div>
         </div>
         <div className="bg-gray-800 p-6 rounded-lg relative">
-            <h2 className="text-xl font-semibold text-gray-300 mb-2">Question {currentQuestionIndex + 1} of {exam.questions.length}</h2>
-            <p className="text-lg text-white mb-6 min-h-[56px]">{currentQuestion.text}</p>
-            <div className="space-y-4">
-                {currentQuestion.options.map((option, idx) => (
-                    <label key={idx} className={`flex items-center p-4 bg-gray-900/50 rounded-lg border-2 hover:border-indigo-500 cursor-pointer transition-colors relative ${answers[currentQuestion.id] === option ? 'border-indigo-500' : 'border-gray-700'}`}>
-                        <input
-                            type="radio"
-                            name={currentQuestion.id}
-                            value={option}
-                            checked={answers[currentQuestion.id] === option}
-                            onChange={() => handleSelectAnswer(currentQuestion.id, option)}
-                            className="w-5 h-5 text-indigo-600 bg-gray-700 border-gray-600 focus:ring-indigo-500 relative z-20"
-                            disabled={isBlocked}
-                        />
-                        <span className="ml-4 text-gray-200 relative z-20">{option}</span>
-                    </label>
-                ))}
-            </div>
+          <h2 className="text-xl font-semibold text-gray-300 mb-2">Question {currentQuestionIndex + 1} of {exam.questions.length}</h2>
+          <p className="text-lg text-white mb-6 min-h-[56px]">{currentQuestion.text}</p>
+          <div className="space-y-4">
+            {currentQuestion.options.map((option, idx) => (
+              <label key={idx} className={`flex items-center p-4 bg-gray-900/50 rounded-lg border-2 hover:border-indigo-500 cursor-pointer transition-colors relative ${answers[currentQuestion.id] === option ? 'border-indigo-500' : 'border-gray-700'}`}>
+                <input
+                  type="radio"
+                  name={currentQuestion.id}
+                  value={option}
+                  checked={answers[currentQuestion.id] === option}
+                  onChange={() => handleSelectAnswer(currentQuestion.id, option)}
+                  className="w-5 h-5 text-indigo-600 bg-gray-700 border-gray-600 focus:ring-indigo-500 relative z-20"
+                  disabled={isBlocked}
+                />
+                <span className="ml-4 text-gray-200 relative z-20">{option}</span>
+              </label>
+            ))}
+          </div>
         </div>
       </main>
-      
+
       <footer className="mt-6 flex justify-between items-center">
         <div>
-            <button
-                onClick={() => setCurrentQuestionIndex(prev => Math.max(0, prev - 1))}
-                disabled={currentQuestionIndex === 0 || isBlocked}
-                className="px-6 py-2 bg-gray-600 rounded-lg hover:bg-gray-700 disabled:opacity-50"
-            >
-                Previous
-            </button>
-            <button
-                onClick={() => setCurrentQuestionIndex(prev => Math.min(exam.questions.length - 1, prev + 1))}
-                disabled={currentQuestionIndex === exam.questions.length - 1 || isBlocked}
-                className="ml-4 px-6 py-2 bg-gray-600 rounded-lg hover:bg-gray-700 disabled:opacity-50"
-            >
-                Next
-            </button>
+          <button
+            onClick={() => setCurrentQuestionIndex(prev => Math.max(0, prev - 1))}
+            disabled={currentQuestionIndex === 0 || isBlocked}
+            className="px-6 py-2 bg-gray-600 rounded-lg hover:bg-gray-700 disabled:opacity-50"
+          >
+            Previous
+          </button>
+          <button
+            onClick={() => setCurrentQuestionIndex(prev => Math.min(exam.questions.length - 1, prev + 1))}
+            disabled={currentQuestionIndex === exam.questions.length - 1 || isBlocked}
+            className="ml-4 px-6 py-2 bg-gray-600 rounded-lg hover:bg-gray-700 disabled:opacity-50"
+          >
+            Next
+          </button>
         </div>
-        <button
+        <div className="flex items-center gap-3">
+          <button
+            onClick={handleCancelExam}
+            disabled={isBlocked}
+            className="px-5 py-3 bg-red-600/80 text-white font-bold rounded-lg hover:bg-red-600 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            Cancel Exam
+          </button>
+          <button
             onClick={handleManualSubmit}
             disabled={isBlocked}
             className="px-8 py-3 bg-green-600 text-white font-bold rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
-        >
+          >
             Submit Exam
-        </button>
+          </button>
+        </div>
       </footer>
     </div>
   );
