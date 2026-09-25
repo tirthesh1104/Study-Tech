@@ -293,6 +293,11 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ user, onLogout, stu
             mode="student"
         /></AnimatedElement>;
       case 'exams':
+      case 'exam':
+      case 'examportal':
+      case 'exam portal':
+      case 'exam-portal':
+      case 'examinations':
         return <AnimatedElement><ExamPortal 
             studentId={user.id}
             exams={exams}
@@ -513,7 +518,12 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ user, onLogout, stu
         case 'support':
           return <AnimatedElement><TroubleshootingDocumentation /></AnimatedElement>;
         default:
-          return null;
+          return <AnimatedElement><ExamPortal 
+              studentId={user.id}
+              exams={exams}
+              submissions={examSubmissions}
+              onSubmitExam={onSubmitExam}
+          /></AnimatedElement>;
       }
     };
 
@@ -556,7 +566,13 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ user, onLogout, stu
                        activeTab === tab ? 'active bg-indigo-600/10 text-indigo-400' : 'text-gray-400 hover:text-gray-200'
                      }`}
                    >
-                     {tab === 'live' ? 'Live' : 
+                     {tab === 'live' ? 'Live Classes' :
+                      tab === 'progress' ? 'Progress Tracker' :
+                      tab === 'exams' ? 'Exam Portal' :
+                      tab === 'leave' ? 'Leave Applications' :
+                      tab === 'attendance' ? 'Full Attendance Record' :
+                      tab === 'learning' ? 'AI Learning Planner' :
+                      tab === 'links' ? 'Important Links' :
                       tab === 'career' ? 'Career' : 
                       tab === 'papers' ? 'Papers' :
                       tab === 'hostel' ? 'Hostel' :
